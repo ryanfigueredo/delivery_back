@@ -38,8 +38,8 @@ export function Navigation() {
     }
   }
 
-  // Não mostrar navegação na página de login
-  if (pathname === '/login' || loading) {
+  // Não mostrar navegação na página de login e suporte
+  if (pathname === '/login' || pathname === '/suporte' || loading) {
     return null
   }
 

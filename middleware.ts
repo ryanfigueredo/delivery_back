@@ -44,6 +44,7 @@ setInterval(() => {
 export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('session')
   const isAuthPage = request.nextUrl.pathname.startsWith('/login')
+  const isSuportePage = request.nextUrl.pathname.startsWith('/suporte')
   const isApiAuth = request.nextUrl.pathname.startsWith('/api/auth')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
 
@@ -57,8 +58,8 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Permitir acesso às páginas de autenticação e APIs
-  if (isAuthPage || isApiAuth || isApiRoute) {
+  // Permitir acesso às páginas de autenticação, suporte e APIs
+  if (isAuthPage || isSuportePage || isApiAuth || isApiRoute) {
     return NextResponse.next()
   }
 
