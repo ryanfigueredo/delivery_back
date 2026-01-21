@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pending
+  printed
+  finished
+  out_for_delivery
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  customer_name String
+  customer_phone String
+  items         Json        // JSONB para produtos e quantidades
+  total_price   Decimal     @db.Decimal(10, 2)
+  status        OrderStatus @default(pending)
+  payment_method String?    // Método de pagamento (Dinheiro, PIX, Cartão, Crédito DMTN)
+  created_at    DateTime    @default(now())
+  order_number  Int?        // Número sequencial do pedido por telefone (001, 002, 003...)
+  daily_sequence Int?       // Número sequencial do dia (1, 2, 3...)
+  display_id    String?     // ID formatado como #1, #2, #3 (sequência diária)
+  customer_total_orders Int? // Total de pedidos que este cliente já fez (para promoções)
+  order_type    String?     // Tipo de pedido: 'restaurante' ou 'delivery'
+  estimated_time Int?       // Tempo estimado em minutos
+  delivery_address String?  // Endereço de entrega (apenas para delivery)
+
+  @@map("orders")
+}
