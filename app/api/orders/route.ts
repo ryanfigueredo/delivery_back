@@ -59,13 +59,17 @@ export async function GET(request: NextRequest) {
       }
 
       // Converter total_price para number se necessário
-      let totalPrice = order.total_price
-      if (typeof totalPrice === 'string') {
-        totalPrice = parseFloat(totalPrice)
-      } else if (totalPrice && typeof totalPrice === 'object' && 'toNumber' in totalPrice) {
-        totalPrice = (totalPrice as any).toNumber()
-      } else if (totalPrice === null || totalPrice === undefined) {
+      let totalPrice: number = 0
+      const rawTotalPrice = order.total_price
+      
+      if (typeof rawTotalPrice === 'string') {
+        totalPrice = parseFloat(rawTotalPrice)
+      } else if (rawTotalPrice && typeof rawTotalPrice === 'object' && 'toNumber' in rawTotalPrice) {
+        totalPrice = (rawTotalPrice as any).toNumber()
+      } else if (rawTotalPrice === null || rawTotalPrice === undefined) {
         totalPrice = 0
+      } else if (typeof rawTotalPrice === 'number') {
+        totalPrice = rawTotalPrice
       }
       
       // Garantir que é um número válido
