@@ -10,6 +10,23 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('X-API-Key')
     const isAdmin = authHeader === process.env.API_KEY
 
+    // Paginação
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const skip = (page - 1) * limit
+
+    // Contar total de pedidos
+    const total = await prisma.order.count({
+      where: {
+        ...(isAdmin ? {} : {
+          status: {
+            in: ['pending', 'printed'],
+          },
+        }),
+      },
+    })
+
     const orders = await prisma.order.findMany({
       where: {
         // Se for admin, mostra todos os status. Se não, só pending/printed
@@ -22,6 +39,8 @@ export async function GET(request: NextRequest) {
       orderBy: {
         created_at: 'desc', // Mais recentes primeiro
       },
+      skip,
+      take: limit,
     })
 
     // Formatar os dados para o formato esperado pelo app
@@ -76,7 +95,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(formattedOrders, { status: 200 })
+    return NextResponse.json({
+      orders: formattedOrders,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: skip + limit < total,
+      },
+    }, { status: 200 })
   } catch (error) {
     console.error('Erro ao buscar pedidos:', error)
     return NextResponse.json(

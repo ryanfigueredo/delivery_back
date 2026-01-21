@@ -1,7 +1,8 @@
 'use client'
 
-import useSWR from 'swr'
+import { useEffect, useState } from 'react'
 import { OrderCard } from '@/components/OrderCard'
+import { getSession } from '@/lib/auth-session'
 
 interface Order {
   id: string
@@ -22,20 +23,44 @@ interface Order {
   customer_total_orders?: number
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+export default function DashboardStreamPage() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-export default function DashboardPage() {
-  const { data, error, isLoading, mutate } = useSWR<{ orders: Order[]; pagination: any }>(
-    '/api/orders?page=1&limit=50',
-    fetcher,
-    {
-      refreshInterval: 5000, // Atualiza a cada 5 segundos (otimizado)
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
+  useEffect(() => {
+    // Usar Server-Sent Events para atualização em tempo real
+    const eventSource = new EventSource('/api/orders/stream')
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        
+        if (data.type === 'initial' || data.type === 'update') {
+          setOrders(data.orders || [])
+          setIsLoading(false)
+          setError(null)
+        } else if (data.type === 'error') {
+          setError(data.message)
+          setIsLoading(false)
+        }
+      } catch (err) {
+        console.error('Erro ao processar SSE:', err)
+      }
     }
-  )
 
-  const orders = data?.orders || []
+    eventSource.onerror = (err) => {
+      console.error('Erro no SSE:', err)
+      eventSource.close()
+      // Fallback para polling se SSE falhar
+      setIsLoading(false)
+      setError('Conexão perdida. Recarregue a página.')
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }, [])
 
   const handleReprint = async (orderId: string) => {
     try {
@@ -44,8 +69,7 @@ export default function DashboardPage() {
       })
 
       if (response.ok) {
-        // Atualiza a lista após reimprimir
-        mutate()
+        // SSE vai atualizar automaticamente
       } else {
         console.error('Erro ao reimprimir pedido')
       }
@@ -62,7 +86,7 @@ export default function DashboardPage() {
             Dashboard de Pedidos
           </h1>
           <p className="text-gray-600">
-            Feed de pedidos em tempo real - Atualização automática a cada 5 segundos
+            Atualização em tempo real via Server-Sent Events
           </p>
         </div>
 
@@ -74,7 +98,7 @@ export default function DashboardPage() {
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            Erro ao carregar pedidos. Tente novamente.
+            {error}
           </div>
         )}
 

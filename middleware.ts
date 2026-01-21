@@ -1,11 +1,61 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Rate limiting simples em memória (para produção, usar Redis)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function getRateLimitKey(request: NextRequest): string {
+  // Usar IP do cliente
+  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+  return ip
+}
+
+function checkRateLimit(request: NextRequest): boolean {
+  const key = getRateLimitKey(request)
+  const now = Date.now()
+  const limit = 100 // 100 requisições
+  const window = 60000 // por minuto
+
+  const record = rateLimitMap.get(key)
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + window })
+    return true
+  }
+
+  if (record.count >= limit) {
+    return false
+  }
+
+  record.count++
+  return true
+}
+
+// Limpar map antigo periodicamente
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, record] of rateLimitMap.entries()) {
+    if (now > record.resetTime) {
+      rateLimitMap.delete(key)
+    }
+  }
+}, 60000) // Limpar a cada minuto
+
 export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('session')
   const isAuthPage = request.nextUrl.pathname.startsWith('/login')
   const isApiAuth = request.nextUrl.pathname.startsWith('/api/auth')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+
+  // Rate limiting para APIs (exceto auth)
+  if (isApiRoute && !isApiAuth) {
+    if (!checkRateLimit(request)) {
+      return NextResponse.json(
+        { error: 'Too Many Requests', message: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      )
+    }
+  }
 
   // Permitir acesso às páginas de autenticação e APIs
   if (isAuthPage || isApiAuth || isApiRoute) {
