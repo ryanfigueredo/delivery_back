@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiKey } from '@/lib/auth'
+import { getSession } from '@/lib/auth-session'
 
 /**
  * API para listar conversas prioritárias (clientes que pediram atendente)
  * O bot armazena essas conversas e esta API busca do bot
  */
 export async function GET(request: NextRequest) {
+  // Verificar autenticação: pode ser por API_KEY ou por sessão
+  const session = await getSession()
   const authValidation = validateApiKey(request)
-  if (!authValidation.isValid) {
-    return authValidation.response!
+  
+  // Se não tem sessão nem API_KEY válida, retorna erro
+  if (!session && !authValidation.isValid) {
+    return authValidation.response || NextResponse.json(
+      { success: false, error: 'Não autenticado' },
+      { status: 401 }
+    )
   }
 
   try {
