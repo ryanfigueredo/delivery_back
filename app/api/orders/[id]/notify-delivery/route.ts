@@ -5,6 +5,8 @@ import { validateApiKey } from '@/lib/auth'
 /**
  * API para notificar cliente via WhatsApp quando pedido sair para entrega
  * Esta API será chamada pelo app Android após marcar pedido como "out_for_delivery"
+ * 
+ * A mensagem será enviada via webhook para o bot WhatsApp
  */
 export async function POST(
   request: NextRequest,
@@ -56,16 +58,48 @@ Obrigado por escolher Tamboril Burguer! 🍔❤️`
 
     const mensagemFinal = message || mensagemPadrao
 
-    // Retornar dados para o app Android enviar via WhatsApp
-    // O app Android terá acesso ao Baileys para enviar a mensagem
+    // Enviar mensagem via API do bot (Railway)
+    // O bot tem um servidor Express que recebe comandos de envio
+    try {
+      // Formatar telefone para WhatsApp
+      let whatsappPhone = order.customer_phone.replace(/\D/g, '')
+      if (!whatsappPhone.startsWith('55') && whatsappPhone.length === 11) {
+        whatsappPhone = `55${whatsappPhone}`
+      }
+      const formattedPhone = `${whatsappPhone}@s.whatsapp.net`
+      
+      const botApiUrl = process.env.BOT_API_URL || 'https://web-production-1a0f.up.railway.app/api/bot/send-message'
+      
+      const botResponse = await fetch(botApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          phone: formattedPhone,
+          message: mensagemFinal
+        })
+      })
+
+      if (botResponse.ok) {
+        console.log(`✅ Mensagem de entrega enviada para ${order.customer_phone}`)
+      } else {
+        console.warn('Bot API não respondeu, mas pedido foi marcado como saiu')
+      }
+    } catch (error) {
+      console.error('Erro ao chamar bot API:', error)
+      // Não falha a operação, apenas loga o erro
+      // O bot pode buscar mensagens pendentes via polling também
+    }
+
+    // Retornar sucesso
     return NextResponse.json({
       success: true,
       order_id: order.id,
       customer_phone: order.customer_phone,
       display_id: displayId,
       message: mensagemFinal,
-      // Formato do telefone para WhatsApp (adicionar código do país se necessário)
-      whatsapp_phone: `55${order.customer_phone}@s.whatsapp.net`
+      note: 'Mensagem enviada ao bot WhatsApp para notificar cliente'
     }, { status: 200 })
   } catch (error) {
     console.error('Erro ao preparar notificação de entrega:', error)
