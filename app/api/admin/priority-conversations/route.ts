@@ -9,7 +9,7 @@ import { getSession } from '@/lib/auth-session'
 export async function GET(request: NextRequest) {
   // Verificar autenticação: pode ser por API_KEY ou por sessão
   const session = await getSession()
-  const authValidation = validateApiKey(request)
+  const authValidation = await validateApiKey(request)
   
   // Se não tem sessão nem API_KEY válida, retorna erro
   if (!session && !authValidation.isValid) {

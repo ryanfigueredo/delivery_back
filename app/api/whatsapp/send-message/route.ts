@@ -10,7 +10,7 @@ import { validateApiKey } from '@/lib/auth'
  */
 export async function POST(request: NextRequest) {
   // Validação de API_KEY
-  const authValidation = validateApiKey(request)
+  const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
   }

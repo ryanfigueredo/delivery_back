@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
  * O app mobile envia o comando aqui, e a maquininha busca via polling ou WebSocket
  */
 export async function POST(request: NextRequest) {
-  const authValidation = validateApiKey(request)
+  const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
   }

@@ -11,7 +11,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   // Validação de API_KEY (opcional para impressão)
-  const authValidation = validateApiKey(request)
+  const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
   }

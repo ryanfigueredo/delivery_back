@@ -8,7 +8,7 @@ import { validateApiKey } from '@/lib/auth'
  * Esta API chama o bot que está rodando no Railway
  */
 export async function POST(request: NextRequest) {
-  const authValidation = validateApiKey(request)
+  const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
   }

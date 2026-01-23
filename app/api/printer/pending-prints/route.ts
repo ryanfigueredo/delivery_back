@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
  * A maquininha faz polling nesta API periodicamente
  */
 export async function GET(request: NextRequest) {
-  const authValidation = validateApiKey(request)
+  const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
   }
