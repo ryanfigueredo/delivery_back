@@ -40,15 +40,7 @@ async function createInitialTenant() {
     console.log(`   Slug: ${tenant.slug}`)
     console.log(`   API Key: ${tenant.api_key}`)
 
-    // Atualizar pedidos existentes para usar este tenant
-    const updatedOrders = await prisma.order.updateMany({
-      where: { tenant_id: null },
-      data: { tenant_id: tenant.id },
-    })
-
-    console.log(`\n📦 ${updatedOrders.count} pedidos existentes atualizados para usar este tenant`)
-
-    // Atualizar usuários existentes para usar este tenant
+    // Atualizar usuários existentes para usar este tenant (tenant_id é nullable em User)
     const updatedUsers = await prisma.user.updateMany({
       where: { tenant_id: null },
       data: { tenant_id: tenant.id },
