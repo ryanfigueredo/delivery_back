@@ -252,7 +252,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" />
                   <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''} />
                   <Legend />
                   <Line 
                     type="monotone" 
