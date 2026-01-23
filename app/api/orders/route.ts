@@ -6,6 +6,31 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    // Obter tenant_id do header ou API key
+    let tenantId: string | null = null
+    
+    const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
+    if (tenantIdHeader) {
+      tenantId = tenantIdHeader
+    } else {
+      // Tentar obter pela API key
+      const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
+      if (apiKey) {
+        const { getTenantByApiKey } = await import('@/lib/tenant')
+        const tenant = await getTenantByApiKey(apiKey)
+        if (tenant) {
+          tenantId = tenant.id
+        }
+      }
+    }
+
+    if (!tenantId) {
+      return NextResponse.json(
+        { message: 'Tenant não identificado. Forneça X-Tenant-Id no header ou X-API-Key válida.' },
+        { status: 400 }
+      )
+    }
+
     // Opcional: validar API_KEY para admin (pode remover se quiser público)
     const authHeader = request.headers.get('X-API-Key')
     const isAdmin = authHeader === process.env.API_KEY
@@ -16,9 +41,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const skip = (page - 1) * limit
 
-    // Contar total de pedidos
+    // Contar total de pedidos do tenant
     const total = await prisma.order.count({
       where: {
+        tenant_id: tenantId,
         ...(isAdmin ? {} : {
           status: {
             in: ['pending', 'printed'],
@@ -29,6 +55,7 @@ export async function GET(request: NextRequest) {
 
     const orders = await prisma.order.findMany({
       where: {
+        tenant_id: tenantId,
         // Se for admin, mostra todos os status. Se não, só pending/printed
         ...(isAdmin ? {} : {
           status: {

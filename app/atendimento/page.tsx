@@ -141,14 +141,14 @@ export default function AtendimentoPage() {
                 <span
                   className={`px-3 py-1 text-white rounded-full text-sm font-semibold transition-all ${
                     hasNewConversations
-                      ? 'bg-green-500 animate-pulse scale-110'
+                      ? 'bg-primary-500 animate-pulse scale-110'
                       : 'bg-red-500'
                   }`}
                 >
                   {conversations.length}
                 </span>
                 {hasNewConversations && (
-                  <span className="text-sm text-green-600 font-semibold animate-pulse">
+                  <span className="text-sm text-primary-600 font-semibold animate-pulse">
                     ✨ Novo!
                   </span>
                 )}
@@ -194,7 +194,7 @@ export default function AtendimentoPage() {
 
                   <button
                     onClick={() => openWhatsApp(conv.whatsappUrl)}
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
                   >
                     <svg
                       className="w-5 h-5"

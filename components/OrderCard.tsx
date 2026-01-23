@@ -51,12 +51,12 @@ export function OrderCard({ order, onReprint }: OrderCardProps) {
 
   return (
     <div
-      className={`rounded-lg shadow-md p-6 transition-all duration-200 ${
+      className={`card-modern p-6 transition-all duration-300 hover:scale-[1.02] ${
         isPending
-          ? 'bg-yellow-50 border-2 border-yellow-400'
+          ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 shadow-yellow-100'
           : isPrinted
-          ? 'bg-green-50 border-2 border-green-400'
-          : 'bg-white border-2 border-gray-200'
+          ? 'bg-gradient-to-br from-primary-50 to-primary-100 border-l-4 border-primary-500 shadow-primary-100'
+          : 'bg-white border-l-4 border-gray-300'
       }`}
     >
       <div className="flex justify-between items-start mb-4">
@@ -66,17 +66,17 @@ export function OrderCard({ order, onReprint }: OrderCardProps) {
               {order.display_id || `Pedido #${order.daily_sequence || order.id.slice(0, 8)}`}
             </h2>
             {order.daily_sequence && (
-              <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+              <span className="badge badge-info">
                 {order.daily_sequence}º do dia
               </span>
             )}
             <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              className={`badge ${
                 isPending
-                  ? 'bg-yellow-400 text-yellow-900'
+                  ? 'badge-warning'
                   : isPrinted
-                  ? 'bg-green-400 text-green-900'
-                  : 'bg-gray-400 text-gray-900'
+                  ? 'badge-success'
+                  : 'bg-gray-200 text-gray-700'
               }`}
             >
               {isPending ? 'Pendente' : isPrinted ? 'Impresso' : 'Finalizado'}
@@ -89,41 +89,41 @@ export function OrderCard({ order, onReprint }: OrderCardProps) {
         {isPrinted && (
           <button
             onClick={() => onReprint(order.id)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+            className="btn-primary text-sm px-4 py-2"
           >
             Reimprimir
           </button>
         )}
       </div>
 
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-          Cliente:
+      <div className="mb-4 bg-white/50 rounded-lg p-3">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+          Cliente
         </h3>
-        <p className="text-gray-900 font-medium">{order.customer_name}</p>
-        <p className="text-sm text-gray-600">{order.customer_phone}</p>
+        <p className="text-gray-900 font-semibold text-lg">{order.customer_name}</p>
+        <p className="text-sm text-gray-600 mt-1">{order.customer_phone}</p>
         {order.customer_total_orders && order.customer_total_orders > 0 && (
-          <p className="text-xs text-blue-600 mt-1">
+          <p className="text-xs text-primary-600 mt-2 font-medium">
             🎉 {order.customer_total_orders}º pedido deste cliente
           </p>
         )}
       </div>
 
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-          Itens do Pedido:
+        <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+          Itens do Pedido
         </h3>
         <div className="space-y-2">
           {order.items.map((item, index) => (
             <div
               key={item.id || index}
-              className="flex justify-between items-center bg-white rounded p-2"
+              className="flex justify-between items-center bg-white/70 rounded-lg p-3 border border-gray-100 hover:bg-white transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 font-medium">
+              <div className="flex items-center gap-3">
+                <span className="bg-primary-100 text-primary-700 font-bold px-2 py-1 rounded text-sm">
                   {item.quantity}x
                 </span>
-                <span className="text-gray-900">{item.name}</span>
+                <span className="text-gray-900 font-medium">{item.name}</span>
               </div>
               <span className="text-gray-700 font-semibold">
                 {formatPrice(item.price)}
@@ -133,12 +133,12 @@ export function OrderCard({ order, onReprint }: OrderCardProps) {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold text-gray-900">
-            Total:
+      <div className="pt-4 border-t-2 border-gray-200">
+        <div className="flex justify-between items-center bg-gradient-to-r from-primary-50 to-transparent rounded-lg p-3">
+          <span className="text-lg font-semibold text-gray-700 uppercase tracking-wide">
+            Total
           </span>
-          <span className="text-2xl font-bold text-gray-900">
+          <span className="text-2xl font-bold text-primary-600 font-display">
             {formatPrice(order.total_price)}
           </span>
         </div>

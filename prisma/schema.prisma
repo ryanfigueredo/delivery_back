@@ -17,8 +17,27 @@ enum OrderStatus {
   out_for_delivery
 }
 
+// Modelo Tenant (Multi-tenant)
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String   // Nome do restaurante (ex: "Tamboril Burguer")
+  slug        String   @unique // Identificador único (ex: "tamboril-burguer")
+  api_key     String   @unique // API key única para cada tenant
+  whatsapp_phone String? // Telefone do WhatsApp do bot
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relações
+  orders      Order[]
+  users       User[]
+
+  @@map("tenants")
+}
+
 model Order {
   id            String      @id @default(uuid())
+  tenant_id     String      // ID do tenant (restaurante)
   customer_name String
   customer_phone String
   items         Json        // JSONB para produtos e quantidades
@@ -34,17 +53,28 @@ model Order {
   estimated_time Int?       // Tempo estimado em minutos
   delivery_address String?  // Endereço de entrega (apenas para delivery)
 
+  // Relação
+  tenant        Tenant      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@index([tenant_id, created_at])
   @@map("orders")
 }
 
 model User {
   id        String   @id @default(uuid())
-  username  String   @unique
+  tenant_id String?  // ID do tenant (null = super admin que pode acessar todos)
+  username  String
   password  String   // Hash da senha (bcrypt)
   name      String
   role      String   @default("admin") // admin, manager, etc
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  // Relação
+  tenant    Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, username]) // Username único por tenant
+  @@index([tenant_id])
   @@map("users")
 }

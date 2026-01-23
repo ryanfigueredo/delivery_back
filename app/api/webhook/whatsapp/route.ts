@@ -145,10 +145,43 @@ export async function POST(request: NextRequest) {
     // Garantir que não tenha caracteres estranhos
     normalizedPhone = normalizedPhone.replace(/[^0-9]/g, '')
 
-    // Contar quantos pedidos já existem deste telefone (correspondência exata)
+    // Obter tenant_id do header ou body (prioridade: header X-Tenant-Id > body tenant_id > API key)
+    let tenantId: string | null = null
+    
+    // Tentar obter do header
+    const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
+    if (tenantIdHeader) {
+      tenantId = tenantIdHeader
+    } else if (body.tenant_id) {
+      // Tentar obter do body
+      tenantId = body.tenant_id
+    } else {
+      // Tentar obter pela API key
+      const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
+      if (apiKey) {
+        const { getTenantByApiKey } = await import('@/lib/tenant')
+        const tenant = await getTenantByApiKey(apiKey)
+        if (tenant) {
+          tenantId = tenant.id
+        }
+      }
+    }
+
+    if (!tenantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Tenant não identificado. Forneça X-Tenant-Id no header ou tenant_id no body.'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Contar quantos pedidos já existem deste telefone para este tenant (correspondência exata)
     const ordersFromPhone = await prisma.order.count({
       where: {
-        customer_phone: normalizedPhone
+        customer_phone: normalizedPhone,
+        tenant_id: tenantId
       }
     })
 
@@ -166,6 +199,7 @@ export async function POST(request: NextRequest) {
 
     const dailySequence = await prisma.order.count({
       where: {
+        tenant_id: tenantId,
         created_at: {
           gte: today,
           lt: tomorrow
@@ -184,6 +218,7 @@ export async function POST(request: NextRequest) {
     // O Prisma já protege contra SQL injection, mas garantimos que o JSONB está limpo
     const order = await prisma.order.create({
       data: {
+        tenant_id: tenantId,
         customer_name: orderData.customer_name,
         customer_phone: normalizedPhone,
         items: orderData.items as unknown as Prisma.InputJsonValue, // JSONB sanitizado

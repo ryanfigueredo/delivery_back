@@ -32,23 +32,23 @@ export default function SuportePage() {
               </h2>
               <ul className="space-y-3 text-gray-700">
                 <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-primary-500 mr-2">✓</span>
                   <span><strong>Recebimento Automático:</strong> Receba pedidos diretamente pelo WhatsApp</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-primary-500 mr-2">✓</span>
                   <span><strong>Gerenciamento de Cardápio:</strong> Adicione, edite e organize seus produtos</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-primary-500 mr-2">✓</span>
                   <span><strong>Controle de Horários:</strong> Defina horários de funcionamento da sua loja</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-primary-500 mr-2">✓</span>
                   <span><strong>Dashboard em Tempo Real:</strong> Visualize todos os pedidos e status</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-primary-500 mr-2">✓</span>
                   <span><strong>Notificações:</strong> Receba alertas de novos pedidos instantaneamente</span>
                 </li>
               </ul>
@@ -143,17 +143,36 @@ export default function SuportePage() {
               </p>
               <div className="space-y-2 text-gray-700">
                 <p>
+                  <strong>WhatsApp:</strong>{' '}
+                  <a 
+                    href="https://wa.me/5521997624873" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:underline"
+                  >
+                    (21) 99762-4873
+                  </a>
+                </p>
+                <p>
                   <strong>Email:</strong> suporte@dmtn.com.br
                 </p>
                 <p>
-                  <strong>Website:</strong> <a href="https://dmtn.com.br" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">dmtn.com.br</a>
+                  <strong>Website:</strong>{' '}
+                  <a 
+                    href="https://dmtn.com.br" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:underline"
+                  >
+                    dmtn.com.br
+                  </a>
                 </p>
               </div>
             </section>
 
             {/* Rodapé */}
             <div className="border-t border-gray-200 pt-6 mt-8 text-center text-gray-500 text-sm">
-              <p>© 2025 Pedidos Express. Todos os direitos reservados.</p>
+              <p>© 2026 Pedidos Express. Todos os direitos reservados.</p>
               <p className="mt-2">Desenvolvido por <a href="https://dmtn.com.br" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">dmtn.com.br</a></p>
             </div>
           </div>

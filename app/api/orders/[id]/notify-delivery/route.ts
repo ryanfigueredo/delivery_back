@@ -48,13 +48,13 @@ export async function POST(
 
 Olá ${order.customer_name}! 👋
 
-Seu pedido ${displayId} acabou de sair para entrega e está a caminho! 🍔
+Seu pedido ${displayId} acabou de sair para entrega e está a caminho!
 
 ${order.order_type === 'delivery' && order.delivery_address 
   ? `📍 Endereço: ${order.delivery_address}\n` 
   : ''}Em breve chegará até você!
 
-Obrigado por escolher Tamboril Burguer! 🍔❤️`
+Obrigado por escolher Pedidos Express! ❤️`
 
     const mensagemFinal = message || mensagemPadrao
 

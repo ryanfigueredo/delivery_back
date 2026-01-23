@@ -45,6 +45,9 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('session')
   const isAuthPage = request.nextUrl.pathname.startsWith('/login')
   const isSuportePage = request.nextUrl.pathname.startsWith('/suporte')
+  const isPrivacidadePage = request.nextUrl.pathname.startsWith('/privacidade')
+  const isHomePage = request.nextUrl.pathname === '/'
+  const isVendasPage = request.nextUrl.pathname === '/vendas'
   const isApiAuth = request.nextUrl.pathname.startsWith('/api/auth')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
 
@@ -58,12 +61,12 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Permitir acesso às páginas de autenticação, suporte e APIs
-  if (isAuthPage || isSuportePage || isApiAuth || isApiRoute) {
+  // Permitir acesso às páginas públicas (home, vendas, login, suporte, privacidade) e APIs
+  if (isHomePage || isVendasPage || isAuthPage || isSuportePage || isPrivacidadePage || isApiAuth || isApiRoute) {
     return NextResponse.next()
   }
 
-  // Se não tem sessão e não está na página de login, redirecionar
+  // Se não tem sessão e não está na página pública, redirecionar
   if (!sessionCookie) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname)

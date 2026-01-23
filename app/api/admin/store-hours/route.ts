@@ -1,23 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiKey } from '@/lib/auth'
+import { getSession } from '@/lib/auth-session'
 import { getStoreStatus, updateStoreStatus } from '@/lib/store-status'
 
 // GET - Obter status atual da loja
 export async function GET(request: NextRequest) {
-  const authValidation = validateApiKey(request)
-  if (!authValidation.isValid) {
-    return authValidation.response!
+  // Permitir acesso via sessão (web) ou API key (app)
+  const session = await getSession()
+  const authValidation = await validateApiKey(request)
+  
+  if (!session && !authValidation.isValid) {
+    return NextResponse.json(
+      { error: 'Não autenticado' },
+      { status: 401 }
+    )
   }
 
   const status = getStoreStatus()
-  return NextResponse.json(status, { status: 200 })
+  return NextResponse.json({ status }, { status: 200 })
 }
 
 // POST - Atualizar status da loja (abrir/fechar)
 export async function POST(request: NextRequest) {
-  const authValidation = validateApiKey(request)
-  if (!authValidation.isValid) {
-    return authValidation.response!
+  // Permitir acesso via sessão (web) ou API key (app)
+  const session = await getSession()
+  const authValidation = await validateApiKey(request)
+  
+  if (!session && !authValidation.isValid) {
+    return NextResponse.json(
+      { error: 'Não autenticado' },
+      { status: 401 }
+    )
   }
 
   try {

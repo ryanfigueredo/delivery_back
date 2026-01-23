@@ -7,6 +7,7 @@ export interface SessionUser {
   username: string
   name: string
   role: string
+  tenant_id?: string | null
 }
 
 /**
@@ -20,6 +21,7 @@ export async function createSession(userId: string) {
       username: true,
       name: true,
       role: true,
+      tenant_id: true,
     },
   })
 
@@ -69,12 +71,15 @@ export async function destroySession() {
 
 /**
  * Verifica credenciais de login
+ * Busca o usuário em todos os tenants (ou sem tenant para super admin)
  */
 export async function verifyCredentials(
   username: string,
   password: string
 ): Promise<SessionUser | null> {
-  const user = await prisma.user.findUnique({
+  // Buscar usuário - pode estar em qualquer tenant ou ser super admin (tenant_id = null)
+  // Como username não é único sozinho, precisamos buscar com findFirst
+  const user = await prisma.user.findFirst({
     where: { username },
   })
 
@@ -92,6 +97,7 @@ export async function verifyCredentials(
     username: user.username,
     name: user.name,
     role: user.role,
+    tenant_id: user.tenant_id,
   }
 }
 

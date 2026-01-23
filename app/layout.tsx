@@ -3,8 +3,8 @@ import './globals.css'
 import { Navigation } from '@/components/Navigation'
 
 export const metadata: Metadata = {
-  title: 'Tamboril Burguer - Dashboard',
-  description: 'Dashboard de pedidos em tempo real',
+  title: 'Pedidos Express - Sistema de Delivery',
+  description: 'Sistema completo de automação para delivery via WhatsApp',
 }
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <Navigation />
-        {children}
+        <main>{children}</main>
       </body>
     </html>
   )
