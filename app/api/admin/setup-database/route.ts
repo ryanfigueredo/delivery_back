@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 /**
  * Rota para configurar o banco de dados completo
