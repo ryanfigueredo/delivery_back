@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     let tenantId: string | null = null
     
     // Verificar Basic Auth primeiro (para apps mobile com login)
-    const authHeader = request.headers.get('authorization')
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
     if (authHeader && authHeader.startsWith('Basic ')) {
       try {
         const base64Credentials = authHeader.split(' ')[1]
@@ -51,15 +51,30 @@ export async function GET(request: NextRequest) {
           const { verifyCredentials } = await import('@/lib/auth-session')
           const user = await verifyCredentials(username, password)
           if (user) {
-            const userData = await prisma.user.findUnique({
-              where: { id: user.id },
-            })
-            if (userData?.tenant_id) {
-              tenantId = userData.tenant_id
+            console.log('✅ Usuário autenticado via Basic Auth:', user.id, 'tenant_id:', user.tenant_id)
+            // Usar tenant_id do user retornado (já vem do verifyCredentials)
+            if (user.tenant_id) {
+              tenantId = user.tenant_id
+            } else {
+              // Se não tem no user, buscar do banco
+              try {
+                const userData = await prisma.user.findUnique({
+                  where: { id: user.id },
+                  select: { tenant_id: true },
+                })
+                if (userData?.tenant_id) {
+                  tenantId = userData.tenant_id
+                }
+              } catch (dbError) {
+                console.error('Erro ao buscar tenant_id do usuário:', dbError)
+              }
             }
+          } else {
+            console.log('❌ Credenciais inválidas no Basic Auth')
           }
         }
       } catch (error) {
+        console.error('Erro ao processar Basic Auth:', error)
         // Ignorar erro de parsing
       }
     }
@@ -83,11 +98,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (!tenantId) {
+      console.error('❌ Tenant não identificado. Headers:', {
+        'x-tenant-id': request.headers.get('x-tenant-id'),
+        'X-Tenant-Id': request.headers.get('X-Tenant-Id'),
+        'x-api-key': request.headers.get('x-api-key') ? 'presente' : 'ausente',
+        'authorization': request.headers.get('authorization') ? 'presente' : 'ausente',
+      })
       return NextResponse.json(
         { message: 'Tenant não identificado. Forneça X-Tenant-Id no header, X-API-Key válida ou Basic Auth.' },
         { status: 400 }
       )
     }
+    
+    console.log('✅ Tenant identificado:', tenantId)
 
     // Opcional: validar API_KEY para admin (pode remover se quiser público)
     const authHeader = request.headers.get('X-API-Key')
