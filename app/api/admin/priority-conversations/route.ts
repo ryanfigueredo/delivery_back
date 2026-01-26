@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateApiKey } from '@/lib/auth'
+import { validateApiKey, validateBasicAuth } from '@/lib/auth'
 import { getSession } from '@/lib/auth-session'
 
 /**
@@ -7,12 +7,13 @@ import { getSession } from '@/lib/auth-session'
  * O bot armazena essas conversas e esta API busca do bot
  */
 export async function GET(request: NextRequest) {
-  // Verificar autenticação: pode ser por API_KEY ou por sessão
+  // Verificar autenticação: pode ser por sessão (web), API_KEY (app) ou Basic Auth (app mobile)
   const session = await getSession()
   const authValidation = await validateApiKey(request)
+  const basicAuth = await validateBasicAuth(request)
   
-  // Se não tem sessão nem API_KEY válida, retorna erro
-  if (!session && !authValidation.isValid) {
+  // Se não tem sessão, API_KEY válida nem Basic Auth válida, retorna erro
+  if (!session && !authValidation.isValid && !basicAuth.isValid) {
     return authValidation.response || NextResponse.json(
       { success: false, error: 'Não autenticado' },
       { status: 401 }

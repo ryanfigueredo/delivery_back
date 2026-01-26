@@ -77,27 +77,38 @@ export async function verifyCredentials(
   username: string,
   password: string
 ): Promise<SessionUser | null> {
-  // Buscar usuário - pode estar em qualquer tenant ou ser super admin (tenant_id = null)
-  // Como username não é único sozinho, precisamos buscar com findFirst
-  const user = await prisma.user.findFirst({
-    where: { username },
-  })
+  try {
+    // Buscar usuário - pode estar em qualquer tenant ou ser super admin (tenant_id = null)
+    // Como username não é único sozinho, precisamos buscar com findFirst
+    const user = await prisma.user.findFirst({
+      where: { username },
+    })
 
-  if (!user) {
-    return null
-  }
+    if (!user) {
+      return null
+    }
 
-  const isValid = await bcrypt.compare(password, user.password)
-  if (!isValid) {
-    return null
-  }
+    // Verificar senha
+    try {
+      const isValid = await bcrypt.compare(password, user.password)
+      if (!isValid) {
+        return null
+      }
+    } catch (bcryptError) {
+      console.error('Erro ao comparar senha:', bcryptError)
+      return null
+    }
 
-  return {
-    id: user.id,
-    username: user.username,
-    name: user.name,
-    role: user.role,
-    tenant_id: user.tenant_id,
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      tenant_id: user.tenant_id,
+    }
+  } catch (error) {
+    console.error('Erro ao verificar credenciais:', error)
+    throw error // Re-throw para ser capturado pela rota
   }
 }
 

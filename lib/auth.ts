@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantByApiKey, TenantInfo } from './tenant'
+import { verifyCredentials } from './auth-session'
 
 /**
  * Valida se a requisição contém a API_KEY válida no header e retorna o tenant
@@ -45,4 +46,42 @@ export async function validateApiKey(request: NextRequest): Promise<{
   }
   
   return { isValid: true, tenant }
+}
+
+/**
+ * Valida Basic Auth (usado pelo app mobile)
+ * @param request - Requisição HTTP do Next.js
+ * @returns Objeto com isValid e user (se válido)
+ */
+export async function validateBasicAuth(request: NextRequest): Promise<{
+  isValid: boolean
+  user?: any
+}> {
+  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+  
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return { isValid: false }
+  }
+  
+  try {
+    // Decodificar Basic Auth
+    const base64Credentials = authHeader.split(' ')[1]
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8')
+    const [username, password] = credentials.split(':')
+    
+    if (!username || !password) {
+      return { isValid: false }
+    }
+    
+    // Verificar credenciais
+    const user = await verifyCredentials(username, password)
+    
+    if (!user) {
+      return { isValid: false }
+    }
+    
+    return { isValid: true, user }
+  } catch (error) {
+    return { isValid: false }
+  }
 }
