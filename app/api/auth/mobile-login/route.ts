@@ -8,21 +8,6 @@ import { prisma } from '@/lib/prisma'
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verificar conexão com banco primeiro
-    try {
-      await prisma.$connect()
-    } catch (dbError: any) {
-      console.error('Erro ao conectar ao banco:', dbError)
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Erro de conexão com o banco de dados',
-          details: process.env.NODE_ENV !== 'production' ? dbError.message : undefined
-        },
-        { status: 500 }
-      )
-    }
-
     const body = await request.json()
     const { username, password, email } = body
 
@@ -109,6 +94,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Login bem-sucedido:', { userId: fullUser.id, username: fullUser.username })
+
     return NextResponse.json({
       success: true,
       user: {
@@ -154,12 +141,5 @@ export async function POST(request: NextRequest) {
       },
       { status: statusCode }
     )
-  } finally {
-    // Desconectar do Prisma
-    try {
-      await prisma.$disconnect()
-    } catch (disconnectError) {
-      // Ignorar erro ao desconectar
-    }
   }
 }
