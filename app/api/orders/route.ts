@@ -6,27 +6,85 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // Obter tenant_id do header ou API key
+    // Verificar se tabela orders existe
+    let ordersTableExists = false
+    try {
+      const tableCheck = await prisma.$queryRawUnsafe<Array<{ table_name: string }>>(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'orders'
+        LIMIT 1
+      `)
+      ordersTableExists = tableCheck.length > 0
+    } catch (error) {
+      console.log('Erro ao verificar tabela orders:', error)
+      ordersTableExists = false
+    }
+
+    if (!ordersTableExists) {
+      // Tabela orders não existe, retornar lista vazia
+      return NextResponse.json({
+        orders: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+      }, { status: 200 })
+    }
+
+    // Obter tenant_id do header, API key ou Basic Auth
     let tenantId: string | null = null
     
-    const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
-    if (tenantIdHeader) {
-      tenantId = tenantIdHeader
-    } else {
-      // Tentar obter pela API key
-      const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
-      if (apiKey) {
-        const { getTenantByApiKey } = await import('@/lib/tenant')
-        const tenant = await getTenantByApiKey(apiKey)
-        if (tenant) {
-          tenantId = tenant.id
+    // Verificar Basic Auth primeiro (para apps mobile com login)
+    const authHeader = request.headers.get('authorization')
+    if (authHeader && authHeader.startsWith('Basic ')) {
+      try {
+        const base64Credentials = authHeader.split(' ')[1]
+        const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8')
+        const [username, password] = credentials.split(':')
+        
+        if (username && password) {
+          const { verifyCredentials } = await import('@/lib/auth-session')
+          const user = await verifyCredentials(username, password)
+          if (user) {
+            const userData = await prisma.user.findUnique({
+              where: { id: user.id },
+            })
+            if (userData?.tenant_id) {
+              tenantId = userData.tenant_id
+            }
+          }
+        }
+      } catch (error) {
+        // Ignorar erro de parsing
+      }
+    }
+    
+    // Se não conseguiu pelo Basic Auth, tentar header ou API key
+    if (!tenantId) {
+      const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
+      if (tenantIdHeader) {
+        tenantId = tenantIdHeader
+      } else {
+        // Tentar obter pela API key
+        const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
+        if (apiKey) {
+          const { getTenantByApiKey } = await import('@/lib/tenant')
+          const tenant = await getTenantByApiKey(apiKey)
+          if (tenant) {
+            tenantId = tenant.id
+          }
         }
       }
     }
 
     if (!tenantId) {
       return NextResponse.json(
-        { message: 'Tenant não identificado. Forneça X-Tenant-Id no header ou X-API-Key válida.' },
+        { message: 'Tenant não identificado. Forneça X-Tenant-Id no header, X-API-Key válida ou Basic Auth.' },
         { status: 400 }
       )
     }
@@ -41,34 +99,55 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const skip = (page - 1) * limit
 
-    // Contar total de pedidos do tenant
-    const total = await prisma.order.count({
-      where: {
-        tenant_id: tenantId,
-        ...(isAdmin ? {} : {
-          status: {
-            in: ['pending', 'printed'],
-          },
-        }),
-      },
-    })
+    // Contar total de pedidos do tenant - com tratamento de erro
+    let total = 0
+    let orders: any[] = []
+    
+    try {
+      total = await prisma.order.count({
+        where: {
+          tenant_id: tenantId,
+          ...(isAdmin ? {} : {
+            status: {
+              in: ['pending', 'printed'],
+            },
+          }),
+        },
+      })
 
-    const orders = await prisma.order.findMany({
-      where: {
-        tenant_id: tenantId,
-        // Se for admin, mostra todos os status. Se não, só pending/printed
-        ...(isAdmin ? {} : {
-          status: {
-            in: ['pending', 'printed'],
+      orders = await prisma.order.findMany({
+        where: {
+          tenant_id: tenantId,
+          // Se for admin, mostra todos os status. Se não, só pending/printed
+          ...(isAdmin ? {} : {
+            status: {
+              in: ['pending', 'printed'],
+            },
+          }),
+        },
+        orderBy: {
+          created_at: 'desc', // Mais recentes primeiro
+        },
+        skip,
+        take: limit,
+      })
+    } catch (orderError: any) {
+      console.error('Erro ao buscar pedidos:', orderError)
+      if (orderError?.code === 'P2022' || orderError?.code === 'P2021') {
+        // Tabela ou coluna não existe, retornar lista vazia
+        return NextResponse.json({
+          orders: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+            hasMore: false,
           },
-        }),
-      },
-      orderBy: {
-        created_at: 'desc', // Mais recentes primeiro
-      },
-      skip,
-      take: limit,
-    })
+        }, { status: 200 })
+      }
+      throw orderError
+    }
 
     // Formatar os dados para o formato esperado pelo app
     const formattedOrders = orders.map((order) => {
@@ -136,10 +215,34 @@ export async function GET(request: NextRequest) {
         hasMore: skip + limit < total,
       },
     }, { status: 200 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao buscar pedidos:', error)
+    console.error('Detalhes do erro:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    })
+    
+    // Se for erro de tabela/coluna não encontrada, retornar lista vazia
+    if (error?.code === 'P2022' || error?.code === 'P2021') {
+      return NextResponse.json({
+        orders: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+      }, { status: 200 })
+    }
+    
     return NextResponse.json(
-      { message: 'Erro ao buscar pedidos', error: String(error) },
+      { 
+        message: 'Erro ao buscar pedidos', 
+        error: String(error),
+        errorCode: error?.code,
+      },
       { status: 500 }
     )
   }
