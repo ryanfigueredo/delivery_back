@@ -301,10 +301,20 @@ export async function GET(request: NextRequest) {
         ...(isSuperAdmin && { totalRestaurants }),
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao buscar estatísticas:', error)
+    console.error('Detalhes do erro:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    })
     return NextResponse.json(
-      { success: false, error: 'Erro ao buscar estatísticas' },
+      { 
+        success: false, 
+        error: 'Erro ao buscar estatísticas',
+        details: process.env.NODE_ENV !== 'production' ? error?.message : undefined,
+        errorCode: error?.code,
+      },
       { status: 500 }
     )
   }
