@@ -138,6 +138,8 @@ export async function POST(request: NextRequest) {
       errorMessage = 'Erro de conexão com o banco de dados. Verifique a configuração do banco.'
     } else if (error?.code === 'P2021') {
       errorMessage = 'Tabela não encontrada no banco de dados. Execute as migrações.'
+    } else if (error?.code === 'P2022') {
+      errorMessage = 'Coluna não encontrada no banco de dados. Execute as migrações para atualizar o schema.'
     } else if (error?.code === 'P2002') {
       errorMessage = 'Violação de constraint única'
     } else if (error?.message?.includes('PrismaClient')) {
