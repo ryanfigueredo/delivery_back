@@ -119,24 +119,31 @@ export async function POST(request: NextRequest) {
     // Verificar tipo de erro
     let errorMessage = 'Erro interno do servidor'
     let statusCode = 500
+    let errorCode = error?.code
     
     if (error?.code === 'P1001') {
-      errorMessage = 'Erro de conexão com o banco de dados'
+      errorMessage = 'Erro de conexão com o banco de dados. Verifique a configuração do banco.'
     } else if (error?.code === 'P2021') {
-      errorMessage = 'Tabela não encontrada no banco de dados'
+      errorMessage = 'Tabela não encontrada no banco de dados. Execute as migrações.'
+    } else if (error?.code === 'P2002') {
+      errorMessage = 'Violação de constraint única'
+    } else if (error?.message?.includes('PrismaClient')) {
+      errorMessage = 'Erro ao inicializar Prisma Client. Verifique se o Prisma foi gerado corretamente.'
     } else if (error?.message) {
-      errorMessage = process.env.NODE_ENV === 'production'
-        ? 'Erro interno do servidor'
-        : error.message
+      // Em produção, retornar mensagem genérica mas incluir código do erro
+      errorMessage = 'Erro interno do servidor'
     }
     
     return NextResponse.json(
       { 
         success: false, 
         error: errorMessage,
+        // Sempre incluir código do erro para ajudar no debug
+        ...(errorCode && { errorCode }),
+        // Detalhes apenas em desenvolvimento
         ...(process.env.NODE_ENV !== 'production' && { 
           details: error?.stack,
-          code: error?.code 
+          message: error?.message
         })
       },
       { status: statusCode }
