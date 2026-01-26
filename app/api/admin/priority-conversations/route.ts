@@ -7,36 +7,64 @@ import { getSession } from '@/lib/auth-session'
  * O bot armazena essas conversas e esta API busca do bot
  */
 export async function GET(request: NextRequest) {
-  // Verificar autenticação: pode ser por sessão (web), API_KEY (app) ou Basic Auth (app mobile)
-  const session = await getSession()
-  const authValidation = await validateApiKey(request)
-  const basicAuth = await validateBasicAuth(request)
-  
-  // Se não tem sessão, API_KEY válida nem Basic Auth válida, retorna erro
-  if (!session && !authValidation.isValid && !basicAuth.isValid) {
-    return authValidation.response || NextResponse.json(
-      { success: false, error: 'Não autenticado' },
-      { status: 401 }
-    )
-  }
-
   try {
+    // Verificar autenticação: pode ser por sessão (web), API_KEY (app) ou Basic Auth (app mobile)
+    const session = await getSession()
+    let authValidation = { isValid: false, response: null as any }
+    let basicAuth = { isValid: false, user: null as any }
+    
+    try {
+      authValidation = await validateApiKey(request)
+    } catch (error) {
+      console.log('Erro ao validar API key:', error)
+    }
+    
+    try {
+      basicAuth = await validateBasicAuth(request)
+    } catch (error) {
+      console.log('Erro ao validar Basic Auth:', error)
+    }
+    
+    // Se não tem sessão, API_KEY válida nem Basic Auth válida, retorna erro
+    if (!session && !authValidation.isValid && !basicAuth.isValid) {
+      return authValidation.response || NextResponse.json(
+        { success: false, error: 'Não autenticado' },
+        { status: 401 }
+      )
+    }
+
     // Buscar conversas prioritárias do bot (Railway)
     const botApiUrl = process.env.BOT_API_URL || 'https://web-production-1a0f.up.railway.app/api/bot/priority-conversations'
     
-    const botResponse = await fetch(botApiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!botResponse.ok) {
+    let botResponse: Response | null = null
+    try {
+      botResponse = await fetch(botApiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        // Timeout de 5 segundos
+        signal: AbortSignal.timeout(5000)
+      })
+    } catch (fetchError: any) {
+      console.error('Erro ao buscar do bot (timeout ou conexão):', fetchError)
       // Se o bot não responder, retorna lista vazia
-      return NextResponse.json({ conversations: [] }, { status: 200 })
+      return NextResponse.json({ conversations: [], total: 0 }, { status: 200 })
     }
 
-    const data = await botResponse.json()
+    if (!botResponse || !botResponse.ok) {
+      // Se o bot não responder, retorna lista vazia
+      console.log('Bot não respondeu ou retornou erro:', botResponse?.status)
+      return NextResponse.json({ conversations: [], total: 0 }, { status: 200 })
+    }
+
+    let data: any = {}
+    try {
+      data = await botResponse.json()
+    } catch (parseError) {
+      console.error('Erro ao fazer parse da resposta do bot:', parseError)
+      return NextResponse.json({ conversations: [], total: 0 }, { status: 200 })
+    }
     
     // Formatar dados para o app
     const conversations = (data.conversations || []).map((conv: any) => ({
@@ -52,8 +80,12 @@ export async function GET(request: NextRequest) {
       conversations,
       total: conversations.length 
     }, { status: 200 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao buscar conversas prioritárias:', error)
+    console.error('Detalhes do erro:', {
+      message: error?.message,
+      stack: error?.stack,
+    })
     // Retorna lista vazia em caso de erro
     return NextResponse.json({ conversations: [], total: 0 }, { status: 200 })
   }
