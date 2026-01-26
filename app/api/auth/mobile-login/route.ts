@@ -8,6 +8,19 @@ import { prisma } from '@/lib/prisma'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se Prisma Client está disponível
+    if (!prisma) {
+      console.error('Prisma Client não está disponível')
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Erro de configuração do servidor',
+          errorCode: 'PRISMA_NOT_INITIALIZED'
+        },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const { username, password, email } = body
 
