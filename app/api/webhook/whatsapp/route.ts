@@ -9,22 +9,24 @@ import { Prisma } from '@prisma/client'
  */
 function sanitizeJsonbData(items: any[]): OrderItem[] {
   return items.map((item: any) => {
-    // Sanitizar strings removendo caracteres perigosos
     const sanitizeString = (str: string): string => {
       if (typeof str !== 'string') return ''
-      // Remove caracteres de controle e caracteres perigosos para SQL/JSON
       return str
-        .replace(/[\x00-\x1F\x7F]/g, '') // Remove caracteres de controle
-        .replace(/[<>\"'\\]/g, '') // Remove caracteres potencialmente perigosos
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/[<>\"'\\]/g, '')
         .trim()
-        .substring(0, 500) // Limita tamanho máximo
+        .substring(0, 500)
     }
+    const id = item.id != null ? String(item.id) : ''
+    const name = item.name ?? item.nome ?? ''
+    const quantity = typeof item.quantity === 'number' ? item.quantity : (typeof item.quantidade === 'number' ? item.quantidade : 0)
+    const price = typeof item.price === 'number' ? item.price : (typeof item.preco === 'number' ? item.preco : 0)
 
     return {
-      id: sanitizeString(String(item.id || '')),
-      name: sanitizeString(String(item.name || '')),
-      quantity: Math.max(0, Math.min(1000, Math.floor(Number(item.quantity) || 0))), // Limita entre 0 e 1000
-      price: Math.max(0, Math.min(999999.99, Number(item.price) || 0)) // Limita preço máximo
+      id: sanitizeString(id) || `item-${Math.random().toString(36).slice(2, 9)}`,
+      name: sanitizeString(String(name)),
+      quantity: Math.max(1, Math.min(1000, Math.floor(Number(quantity) || 1))),
+      price: Math.max(0, Math.min(999999.99, Number(price) || 0))
     }
   })
 }
@@ -53,45 +55,53 @@ function validateOrderData(data: any): { isValid: boolean; errors: string[]; san
   } else {
     // Validar estrutura de cada item
     data.items.forEach((item: any, index: number) => {
-      if (!item.id || typeof item.id !== 'string') {
+      const id = item.id != null ? String(item.id) : ''
+      if (!id.trim()) {
         errors.push(`Item ${index + 1}: ID é obrigatório`)
       }
-      if (!item.name || typeof item.name !== 'string') {
+      const name = item.name != null ? String(item.name) : (item.nome != null ? String(item.nome) : '')
+      if (!name.trim()) {
         errors.push(`Item ${index + 1}: Nome é obrigatório`)
       }
-      if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+      const qty = typeof item.quantity === 'number' ? item.quantity : (typeof item.quantidade === 'number' ? item.quantidade : NaN)
+      if (!Number.isFinite(qty) || qty <= 0) {
         errors.push(`Item ${index + 1}: Quantidade deve ser um número maior que zero`)
       }
-      if (typeof item.price !== 'number' || item.price < 0) {
+      const price = typeof item.price === 'number' ? item.price : (typeof item.preco === 'number' ? item.preco : NaN)
+      if (!Number.isFinite(price) || price < 0) {
         errors.push(`Item ${index + 1}: Preço deve ser um número maior ou igual a zero`)
       }
     })
   }
 
-  // Validar total_price
-  if (typeof data.total_price !== 'number' || data.total_price < 0) {
+  // Validar total_price (aceitar number ou string numérica)
+  const totalPrice = typeof data.total_price === 'number' ? data.total_price : parseFloat(data.total_price)
+  if (!Number.isFinite(totalPrice) || totalPrice < 0) {
     errors.push('Preço total deve ser um número maior ou igual a zero')
   }
 
   // Validar se o total_price corresponde à soma dos items
-  if (Array.isArray(data.items) && data.items.length > 0) {
-    const calculatedTotal = data.items.reduce((sum: number, item: OrderItem) => {
-      return sum + item.price * item.quantity
+  if (Array.isArray(data.items) && data.items.length > 0 && Number.isFinite(totalPrice)) {
+    const calculatedTotal = data.items.reduce((sum: number, item: any) => {
+      const q = typeof item.quantity === 'number' ? item.quantity : (typeof item.quantidade === 'number' ? item.quantidade : 0)
+      const p = typeof item.price === 'number' ? item.price : (typeof item.preco === 'number' ? item.preco : 0)
+      return sum + p * q
     }, 0)
-    const tolerance = 0.01 // Tolerância para diferenças de arredondamento
-    if (Math.abs(calculatedTotal - data.total_price) > tolerance) {
-      errors.push(`Preço total (${data.total_price}) não corresponde à soma dos items (${calculatedTotal.toFixed(2)})`)
+    const tolerance = 0.50
+    if (Math.abs(calculatedTotal - totalPrice) > tolerance) {
+      errors.push(`Preço total (${totalPrice}) não corresponde à soma dos items (${calculatedTotal.toFixed(2)})`)
     }
   }
 
   // Se passou na validação, sanitizar os dados
   if (errors.length === 0) {
     const sanitizedItems = sanitizeJsonbData(data.items)
+    const totalPrice = typeof data.total_price === 'number' ? data.total_price : parseFloat(data.total_price)
     const sanitizedData: WhatsAppWebhookPayload = {
-      customer_name: data.customer_name.trim().substring(0, 200),
-      customer_phone: data.customer_phone.trim().substring(0, 20),
+      customer_name: String(data.customer_name || '').trim().substring(0, 200),
+      customer_phone: String(data.customer_phone || '').trim().substring(0, 20),
       items: sanitizedItems,
-      total_price: Math.max(0, Math.min(999999.99, data.total_price))
+      total_price: Math.max(0, Math.min(999999.99, Number.isFinite(totalPrice) ? totalPrice : 0))
     }
     return {
       isValid: true,
@@ -258,39 +268,37 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao processar webhook do WhatsApp:', error)
+    console.error('Stack:', error?.stack)
+    console.error('Code:', error?.code)
 
-    // Tratamento de erros específicos do Prisma
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
         return NextResponse.json(
-          {
-            success: false,
-            error: 'Erro de duplicação no banco de dados',
-            details: 'Já existe um registro com esses dados'
-          },
+          { success: false, error: 'Erro de duplicação no banco de dados', details: 'P2002' },
           { status: 409 }
         )
       }
       if (error.code === 'P2003') {
         return NextResponse.json(
-          {
-            success: false,
-            error: 'Erro de referência no banco de dados',
-            details: 'Referência inválida'
-          },
+          { success: false, error: 'Erro de referência (tenant ou tabela). Verifique se o tenant existe.', details: 'P2003' },
           { status: 400 }
+        )
+      }
+      if (error.code === 'P2021' || error.code === 'P2022') {
+        return NextResponse.json(
+          { success: false, error: 'Tabela ou coluna não existe. Execute o setup do banco (POST /api/admin/setup-database).', details: error.code },
+          { status: 500 }
         )
       }
     }
 
-    // Erro genérico
     return NextResponse.json(
       {
         success: false,
-        error: 'Erro interno do servidor',
-        details: process.env.NODE_ENV === 'development' ? String(error) : 'Erro ao processar pedido'
+        error: 'Erro ao processar pedido',
+        details: process.env.NODE_ENV === 'development' ? String(error?.message || error) : 'Erro interno. Verifique os logs.'
       },
       { status: 500 }
     )
