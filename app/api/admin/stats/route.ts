@@ -86,6 +86,43 @@ export async function GET(request: NextRequest) {
     lastWeekStart.setDate(weekStart.getDate() - 7)
     const lastWeekEnd = new Date(weekStart)
 
+    // Verificar se tabela orders existe
+    const ordersTableExists = await prisma.$queryRawUnsafe<Array<{ table_name: string }>>(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'orders'
+      LIMIT 1
+    `)
+
+    if (ordersTableExists.length === 0) {
+      // Tabela orders não existe, retornar dados vazios
+      return NextResponse.json({
+        success: true,
+        stats: {
+          today: {
+            orders: 0,
+            revenue: 0,
+            revenueFormatted: 'R$ 0,00',
+          },
+          week: {
+            orders: 0,
+            revenue: 0,
+            revenueFormatted: 'R$ 0,00',
+            ordersChange: 0,
+            revenueChange: 0,
+          },
+          pendingOrders: 0,
+          dailyStats: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(day => ({
+            day,
+            orders: 0,
+            revenue: 0,
+          })),
+          ...(isSuperAdmin && { totalRestaurants: 0 }),
+        },
+      })
+    }
+
     // Pedidos de hoje
     const todayOrders = await prisma.order.count({
       where: {
