@@ -56,17 +56,34 @@ export async function GET(request: NextRequest) {
             if (user.tenant_id) {
               tenantId = user.tenant_id
             } else {
-              // Se não tem no user, buscar do banco
+              // Se não tem no user, buscar do banco usando SQL direto (fallback)
               try {
-                const userData = await prisma.user.findUnique({
-                  where: { id: user.id },
-                  select: { tenant_id: true },
-                })
-                if (userData?.tenant_id) {
-                  tenantId = userData.tenant_id
+                const users = await prisma.$queryRawUnsafe<Array<{ tenant_id: string | null }>>(`
+                  SELECT tenant_id FROM users WHERE id = $1 LIMIT 1
+                `, user.id)
+                if (users.length > 0 && users[0].tenant_id) {
+                  tenantId = users[0].tenant_id
+                  console.log('✅ Tenant_id obtido do banco:', tenantId)
                 }
-              } catch (dbError) {
+              } catch (dbError: any) {
                 console.error('Erro ao buscar tenant_id do usuário:', dbError)
+                // Se der erro P2022, tentar buscar sem tenant_id (pode não existir a coluna ainda)
+                if (dbError?.code === 'P2022') {
+                  console.log('⚠️  Coluna tenant_id não existe, tentando buscar tenant pelo slug...')
+                  // Buscar tenant pelo slug do app
+                  const tenantSlug = request.headers.get('x-tenant-id') || 'tamboril-burguer'
+                  try {
+                    const tenants = await prisma.$queryRawUnsafe<Array<{ id: string }>>(`
+                      SELECT id FROM tenants WHERE slug = $1 LIMIT 1
+                    `, tenantSlug)
+                    if (tenants.length > 0) {
+                      tenantId = tenants[0].id
+                      console.log('✅ Tenant_id obtido pelo slug:', tenantId)
+                    }
+                  } catch (tenantError) {
+                    console.error('Erro ao buscar tenant pelo slug:', tenantError)
+                  }
+                }
               }
             }
           } else {
@@ -83,15 +100,41 @@ export async function GET(request: NextRequest) {
     if (!tenantId) {
       const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
       if (tenantIdHeader) {
-        tenantId = tenantIdHeader
+        // Se for um UUID, usar diretamente. Se for slug, buscar o ID
+        if (tenantIdHeader.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          tenantId = tenantIdHeader
+        } else {
+          // É um slug, buscar o ID do tenant
+          try {
+            const { getTenantByApiKey } = await import('@/lib/tenant')
+            const tenant = await getTenantByApiKey(tenantIdHeader)
+            if (tenant) {
+              tenantId = tenant.id
+            } else {
+              // Tentar buscar pelo slug diretamente
+              const tenants = await prisma.$queryRawUnsafe<Array<{ id: string }>>(`
+                SELECT id FROM tenants WHERE slug = $1 LIMIT 1
+              `, tenantIdHeader)
+              if (tenants.length > 0) {
+                tenantId = tenants[0].id
+              }
+            }
+          } catch (error) {
+            console.error('Erro ao buscar tenant pelo header:', error)
+          }
+        }
       } else {
         // Tentar obter pela API key
         const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
         if (apiKey) {
-          const { getTenantByApiKey } = await import('@/lib/tenant')
-          const tenant = await getTenantByApiKey(apiKey)
-          if (tenant) {
-            tenantId = tenant.id
+          try {
+            const { getTenantByApiKey } = await import('@/lib/tenant')
+            const tenant = await getTenantByApiKey(apiKey)
+            if (tenant) {
+              tenantId = tenant.id
+            }
+          } catch (error) {
+            console.error('Erro ao buscar tenant pela API key:', error)
           }
         }
       }
