@@ -8,6 +8,21 @@ import { prisma } from '@/lib/prisma'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verificar conexão com banco primeiro
+    try {
+      await prisma.$connect()
+    } catch (dbError: any) {
+      console.error('Erro ao conectar ao banco:', dbError)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Erro de conexão com o banco de dados',
+          details: process.env.NODE_ENV !== 'production' ? dbError.message : undefined
+        },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const { username, password, email } = body
 
@@ -29,6 +44,20 @@ export async function POST(request: NextRequest) {
       user = await verifyCredentials(loginIdentifier, password)
     } catch (verifyError: any) {
       console.error('Erro ao verificar credenciais:', verifyError)
+      console.error('Stack:', verifyError?.stack)
+      
+      // Se for erro de conexão, retornar erro específico
+      if (verifyError?.code === 'P1001' || verifyError?.message?.includes('connect')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Erro de conexão com o banco de dados',
+            details: process.env.NODE_ENV !== 'production' ? verifyError.message : undefined
+          },
+          { status: 500 }
+        )
+      }
+      
       throw verifyError
     }
 
@@ -54,6 +83,21 @@ export async function POST(request: NextRequest) {
       })
     } catch (prismaError: any) {
       console.error('Erro ao buscar usuário no Prisma:', prismaError)
+      console.error('Código do erro:', prismaError?.code)
+      console.error('Mensagem:', prismaError?.message)
+      
+      // Se for erro de conexão ou tabela não existe
+      if (prismaError?.code === 'P1001' || prismaError?.code === 'P2021') {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Erro de conexão com o banco de dados',
+            details: process.env.NODE_ENV !== 'production' ? prismaError.message : undefined
+          },
+          { status: 500 }
+        )
+      }
+      
       throw new Error(`Erro ao buscar usuário: ${prismaError.message}`)
     }
 
@@ -82,20 +126,40 @@ export async function POST(request: NextRequest) {
       message: error?.message,
       stack: error?.stack,
       name: error?.name,
+      code: error?.code,
     })
     
-    // Retornar mensagem de erro mais específica em desenvolvimento
-    const errorMessage = process.env.NODE_ENV === 'production'
-      ? 'Erro interno do servidor'
-      : error?.message || 'Erro interno do servidor'
+    // Verificar tipo de erro
+    let errorMessage = 'Erro interno do servidor'
+    let statusCode = 500
+    
+    if (error?.code === 'P1001') {
+      errorMessage = 'Erro de conexão com o banco de dados'
+    } else if (error?.code === 'P2021') {
+      errorMessage = 'Tabela não encontrada no banco de dados'
+    } else if (error?.message) {
+      errorMessage = process.env.NODE_ENV === 'production'
+        ? 'Erro interno do servidor'
+        : error.message
+    }
     
     return NextResponse.json(
       { 
         success: false, 
         error: errorMessage,
-        ...(process.env.NODE_ENV !== 'production' && { details: error?.stack })
+        ...(process.env.NODE_ENV !== 'production' && { 
+          details: error?.stack,
+          code: error?.code 
+        })
       },
-      { status: 500 }
+      { status: statusCode }
     )
+  } finally {
+    // Desconectar do Prisma
+    try {
+      await prisma.$disconnect()
+    } catch (disconnectError) {
+      // Ignorar erro ao desconectar
+    }
   }
 }
