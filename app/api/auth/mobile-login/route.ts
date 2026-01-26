@@ -40,9 +40,11 @@ export async function POST(request: NextRequest) {
     let user
     try {
       user = await verifyCredentials(loginIdentifier, password)
+      console.log('Resultado verifyCredentials:', user ? 'Usuário encontrado' : 'Usuário não encontrado ou senha incorreta')
     } catch (verifyError: any) {
       console.error('Erro ao verificar credenciais:', verifyError)
       console.error('Stack:', verifyError?.stack)
+      console.error('Código do erro:', verifyError?.code)
       
       // Se for erro de conexão, retornar erro específico
       if (verifyError?.code === 'P1001' || verifyError?.message?.includes('connect')) {

@@ -141,12 +141,16 @@ export async function verifyCredentials(
     }
 
     if (!user) {
+      console.log('❌ Usuário não encontrado para username:', username)
       return null
     }
+
+    console.log('✅ Usuário encontrado:', { id: user.id, username: user.username, role: user.role })
 
     // Verificar senha
     try {
       const isValid = await bcrypt.compare(password, user.password)
+      console.log('🔐 Verificação de senha:', isValid ? '✅ Senha correta' : '❌ Senha incorreta')
       if (!isValid) {
         return null
       }
