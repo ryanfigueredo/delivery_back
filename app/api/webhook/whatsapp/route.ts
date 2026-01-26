@@ -145,22 +145,31 @@ export async function POST(request: NextRequest) {
     // Garantir que não tenha caracteres estranhos
     normalizedPhone = normalizedPhone.replace(/[^0-9]/g, '')
 
-    // Obter tenant_id do header ou body (prioridade: header X-Tenant-Id > body tenant_id > API key)
+    // Obter tenant_id (UUID) do header, body ou API key
+    // Bot envia slug (ex: tamboril-burguer) ou API key — precisamos do UUID para orders.tenant_id
     let tenantId: string | null = null
-    
-    // Tentar obter do header
+    const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
     const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
-    if (tenantIdHeader) {
-      tenantId = tenantIdHeader
-    } else if (body.tenant_id) {
-      // Tentar obter do body
-      tenantId = body.tenant_id
-    } else {
-      // Tentar obter pela API key
-      const apiKey = request.headers.get('x-api-key') || request.headers.get('X-API-Key')
-      if (apiKey) {
-        const { getTenantByApiKey } = await import('@/lib/tenant')
-        const tenant = await getTenantByApiKey(apiKey)
+    const tenantFromBody = body.tenant_id
+
+    // 1) API key tem prioridade — sempre retorna tenant.id (UUID)
+    if (apiKey) {
+      const { getTenantByApiKey } = await import('@/lib/tenant')
+      const tenant = await getTenantByApiKey(apiKey)
+      if (tenant) {
+        tenantId = tenant.id
+      }
+    }
+
+    // 2) Se ainda não temos UUID, usar header ou body (pode ser slug ou UUID)
+    if (!tenantId && (tenantIdHeader || tenantFromBody)) {
+      const raw = tenantIdHeader || tenantFromBody
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)
+      if (isUuid) {
+        tenantId = raw
+      } else {
+        const { getTenantBySlug } = await import('@/lib/tenant')
+        const tenant = await getTenantBySlug(raw)
         if (tenant) {
           tenantId = tenant.id
         }
@@ -171,7 +180,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Tenant não identificado. Forneça X-Tenant-Id no header ou tenant_id no body.'
+          error: 'Tenant não identificado. Forneça X-Tenant-Id (slug ou UUID) ou X-API-Key válida.'
         },
         { status: 400 }
       )

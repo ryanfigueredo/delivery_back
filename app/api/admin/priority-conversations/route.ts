@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar conversas prioritárias do bot (Railway)
-    const botApiUrl = process.env.BOT_API_URL || 'https://web-production-1a0f.up.railway.app/api/bot/priority-conversations'
+    const botApiUrl = process.env.BOT_API_URL || 'https://web-production-0e9c9.up.railway.app/api/bot/priority-conversations'
     
     let botResponse: Response | null = null
     try {

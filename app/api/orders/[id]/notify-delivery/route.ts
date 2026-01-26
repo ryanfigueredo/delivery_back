@@ -68,7 +68,7 @@ Obrigado por escolher Pedidos Express! ❤️`
       }
       const formattedPhone = `${whatsappPhone}@s.whatsapp.net`
       
-      const botApiUrl = process.env.BOT_API_URL || 'https://web-production-1a0f.up.railway.app/api/bot/send-message'
+      const botApiUrl = process.env.BOT_API_URL || 'https://web-production-0e9c9.up.railway.app/api/bot/send-message'
       
       const botResponse = await fetch(botApiUrl, {
         method: 'POST',
