@@ -39,22 +39,31 @@ export async function POST(request: NextRequest) {
       END $$;
     `
 
-    // SQL para adicionar foreign key
+    // SQL para adicionar foreign key (apenas se tabela tenants existir)
     const addForeignKeySQL = `
       DO $$ 
       BEGIN
-          IF NOT EXISTS (
+          -- Verificar se tabela tenants existe
+          IF EXISTS (
               SELECT 1 
-              FROM information_schema.table_constraints 
-              WHERE constraint_schema = 'public'
-              AND constraint_name = 'users_tenant_id_fkey'
+              FROM information_schema.tables 
+              WHERE table_schema = 'public'
+              AND table_name = 'tenants'
           ) THEN
-              ALTER TABLE "users" 
-              ADD CONSTRAINT "users_tenant_id_fkey" 
-              FOREIGN KEY ("tenant_id") 
-              REFERENCES "tenants"("id") 
-              ON DELETE CASCADE 
-              ON UPDATE CASCADE;
+              -- Verificar se constraint já existe
+              IF NOT EXISTS (
+                  SELECT 1 
+                  FROM information_schema.table_constraints 
+                  WHERE constraint_schema = 'public'
+                  AND constraint_name = 'users_tenant_id_fkey'
+              ) THEN
+                  ALTER TABLE "users" 
+                  ADD CONSTRAINT "users_tenant_id_fkey" 
+                  FOREIGN KEY ("tenant_id") 
+                  REFERENCES "tenants"("id") 
+                  ON DELETE CASCADE 
+                  ON UPDATE CASCADE;
+              END IF;
           END IF;
       END $$;
     `
