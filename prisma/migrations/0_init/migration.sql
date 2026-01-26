@@ -57,39 +57,39 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 -- CreateIndex (only if not exists)
 DO $$ BEGIN
-    CREATE UNIQUE INDEX "tenants_slug_key" ON "tenants"("slug");
-EXCEPTION
-    WHEN duplicate_table THEN null;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'tenants_slug_key') THEN
+        CREATE UNIQUE INDEX "tenants_slug_key" ON "tenants"("slug");
+    END IF;
 END $$;
 
 DO $$ BEGIN
-    CREATE UNIQUE INDEX "tenants_api_key_key" ON "tenants"("api_key");
-EXCEPTION
-    WHEN duplicate_table THEN null;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'tenants_api_key_key') THEN
+        CREATE UNIQUE INDEX "tenants_api_key_key" ON "tenants"("api_key");
+    END IF;
 END $$;
 
 DO $$ BEGIN
-    CREATE INDEX "orders_tenant_id_idx" ON "orders"("tenant_id");
-EXCEPTION
-    WHEN duplicate_table THEN null;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'orders_tenant_id_idx') THEN
+        CREATE INDEX "orders_tenant_id_idx" ON "orders"("tenant_id");
+    END IF;
 END $$;
 
 DO $$ BEGIN
-    CREATE INDEX "orders_tenant_id_created_at_idx" ON "orders"("tenant_id", "created_at");
-EXCEPTION
-    WHEN duplicate_table THEN null;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'orders_tenant_id_created_at_idx') THEN
+        CREATE INDEX "orders_tenant_id_created_at_idx" ON "orders"("tenant_id", "created_at");
+    END IF;
 END $$;
 
 DO $$ BEGIN
-    CREATE INDEX "users_tenant_id_idx" ON "users"("tenant_id");
-EXCEPTION
-    WHEN duplicate_table THEN null;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'users_tenant_id_idx') THEN
+        CREATE INDEX "users_tenant_id_idx" ON "users"("tenant_id");
+    END IF;
 END $$;
 
 DO $$ BEGIN
-    CREATE UNIQUE INDEX "users_tenant_id_username_key" ON "users"("tenant_id", "username");
-EXCEPTION
-    WHEN duplicate_table THEN null;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'users_tenant_id_username_key') THEN
+        CREATE UNIQUE INDEX "users_tenant_id_username_key" ON "users"("tenant_id", "username");
+    END IF;
 END $$;
 
 -- AddForeignKey (only if not exists)
