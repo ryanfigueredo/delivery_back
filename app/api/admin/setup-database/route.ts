@@ -34,11 +34,10 @@ export async function POST(request: NextRequest) {
           "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updated_at" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")
-        );
-        
-        CREATE UNIQUE INDEX IF NOT EXISTS "tenants_slug_key" ON "tenants"("slug");
-        CREATE UNIQUE INDEX IF NOT EXISTS "tenants_api_key_key" ON "tenants"("api_key");
+        )
       `)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "tenants_slug_key" ON "tenants"("slug")`)
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "tenants_api_key_key" ON "tenants"("api_key")`)
       console.log('✅ Tabela tenants criada')
     } else {
       console.log('✅ Tabela tenants já existe')
@@ -67,10 +66,9 @@ export async function POST(request: NextRequest) {
           "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updated_at" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "users_pkey" PRIMARY KEY ("id")
-        );
-        
-        CREATE INDEX IF NOT EXISTS "users_tenant_id_idx" ON "users"("tenant_id");
+        )
       `)
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "users_tenant_id_idx" ON "users"("tenant_id")`)
       console.log('✅ Tabela users criada')
     } else {
       console.log('✅ Tabela users já existe')
@@ -87,10 +85,8 @@ export async function POST(request: NextRequest) {
       
       if (tenantIdColumn.length === 0) {
         console.log('⚠️  Adicionando coluna tenant_id...')
-        await prisma.$executeRawUnsafe(`
-          ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "tenant_id" TEXT;
-          CREATE INDEX IF NOT EXISTS "users_tenant_id_idx" ON "users"("tenant_id");
-        `)
+        await prisma.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "tenant_id" TEXT`)
+        await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "users_tenant_id_idx" ON "users"("tenant_id")`)
         console.log('✅ Coluna tenant_id adicionada')
       }
     }
