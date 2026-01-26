@@ -188,8 +188,8 @@ export async function GET(request: NextRequest) {
     console.log('✅ Tenant identificado:', tenantId)
 
     // Opcional: validar API_KEY para admin (pode remover se quiser público)
-    const authHeader = request.headers.get('X-API-Key')
-    const isAdmin = authHeader === process.env.API_KEY
+    const apiKeyHeader = request.headers.get('X-API-Key')
+    const isAdmin = apiKeyHeader === process.env.API_KEY
 
     // Paginação
     const { searchParams } = new URL(request.url)
