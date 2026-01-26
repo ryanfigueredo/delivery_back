@@ -5,7 +5,7 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- CreateTable (only if not exists)
+-- CreateTable tenants (only if not exists)
 CREATE TABLE IF NOT EXISTS "tenants" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS "tenants" (
     CONSTRAINT "tenants_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable (only if not exists)
+-- CreateTable orders (only if not exists)
 CREATE TABLE IF NOT EXISTS "orders" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS "orders" (
     CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable (only if not exists)
+-- CreateTable users (only if not exists)
 CREATE TABLE IF NOT EXISTS "users" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT,
@@ -56,22 +56,41 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 
 -- CreateIndex (only if not exists)
-CREATE UNIQUE INDEX IF NOT EXISTS "tenants_slug_key" ON "tenants"("slug");
+DO $$ BEGIN
+    CREATE UNIQUE INDEX "tenants_slug_key" ON "tenants"("slug");
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
--- CreateIndex (only if not exists)
-CREATE UNIQUE INDEX IF NOT EXISTS "tenants_api_key_key" ON "tenants"("api_key");
+DO $$ BEGIN
+    CREATE UNIQUE INDEX "tenants_api_key_key" ON "tenants"("api_key");
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
--- CreateIndex (only if not exists)
-CREATE INDEX IF NOT EXISTS "orders_tenant_id_idx" ON "orders"("tenant_id");
+DO $$ BEGIN
+    CREATE INDEX "orders_tenant_id_idx" ON "orders"("tenant_id");
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
--- CreateIndex (only if not exists)
-CREATE INDEX IF NOT EXISTS "orders_tenant_id_created_at_idx" ON "orders"("tenant_id", "created_at");
+DO $$ BEGIN
+    CREATE INDEX "orders_tenant_id_created_at_idx" ON "orders"("tenant_id", "created_at");
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
--- CreateIndex (only if not exists)
-CREATE INDEX IF NOT EXISTS "users_tenant_id_idx" ON "users"("tenant_id");
+DO $$ BEGIN
+    CREATE INDEX "users_tenant_id_idx" ON "users"("tenant_id");
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
--- CreateIndex (only if not exists)
-CREATE UNIQUE INDEX IF NOT EXISTS "users_tenant_id_username_key" ON "users"("tenant_id", "username");
+DO $$ BEGIN
+    CREATE UNIQUE INDEX "users_tenant_id_username_key" ON "users"("tenant_id", "username");
+EXCEPTION
+    WHEN duplicate_table THEN null;
+END $$;
 
 -- AddForeignKey (only if not exists)
 DO $$ BEGIN
@@ -80,10 +99,8 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- AddForeignKey (only if not exists)
 DO $$ BEGIN
     ALTER TABLE "users" ADD CONSTRAINT "users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
-
