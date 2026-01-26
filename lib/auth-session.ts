@@ -78,11 +78,67 @@ export async function verifyCredentials(
   password: string
 ): Promise<SessionUser | null> {
   try {
-    // Buscar usuário - pode estar em qualquer tenant ou ser super admin (tenant_id = null)
-    // Como username não é único sozinho, precisamos buscar com findFirst
-    const user = await prisma.user.findFirst({
-      where: { username },
-    })
+    // Tentar buscar usuário normalmente primeiro
+    let user: any = null
+    
+    try {
+      // Verificar se a coluna tenant_id existe
+      const columnCheck = await prisma.$queryRawUnsafe<Array<{ column_name: string }>>(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public'
+        AND table_name = 'users' 
+        AND column_name = 'tenant_id'
+        LIMIT 1
+      `)
+      
+      const hasTenantIdColumn = columnCheck.length > 0
+      
+      if (hasTenantIdColumn) {
+        // Coluna existe, usar Prisma normalmente
+        user = await prisma.user.findFirst({
+          where: { username },
+        })
+      } else {
+        // Coluna não existe, usar SQL direto
+        const users = await prisma.$queryRawUnsafe<Array<{
+          id: string
+          username: string
+          name: string
+          role: string
+          password: string
+          tenant_id?: string | null
+        }>>(`
+          SELECT id, username, name, role, password, tenant_id
+          FROM users
+          WHERE username = $1
+          LIMIT 1
+        `, username)
+        
+        user = users[0] || null
+      }
+    } catch (queryError: any) {
+      // Se der erro P2022 (coluna não existe), tentar SQL direto
+      if (queryError?.code === 'P2022') {
+        console.log('Coluna tenant_id não existe, usando SQL direto...')
+        const users = await prisma.$queryRawUnsafe<Array<{
+          id: string
+          username: string
+          name: string
+          role: string
+          password: string
+        }>>(`
+          SELECT id, username, name, role, password
+          FROM users
+          WHERE username = $1
+          LIMIT 1
+        `, username)
+        
+        user = users[0] || null
+      } else {
+        throw queryError
+      }
+    }
 
     if (!user) {
       return null
@@ -104,7 +160,7 @@ export async function verifyCredentials(
       username: user.username,
       name: user.name,
       role: user.role,
-      tenant_id: user.tenant_id,
+      tenant_id: user.tenant_id || null,
     }
   } catch (error) {
     console.error('Erro ao verificar credenciais:', error)

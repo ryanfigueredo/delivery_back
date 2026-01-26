@@ -67,25 +67,75 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar informações completas do usuário
-    let fullUser
+    let fullUser: any = null
     try {
-      fullUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: {
-          id: true,
-          username: true,
-          name: true,
-          role: true,
-          tenant_id: true,
-        },
-      })
+      // Verificar se a coluna tenant_id existe
+      const columnCheck = await prisma.$queryRawUnsafe<Array<{ column_name: string }>>(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public'
+        AND table_name = 'users' 
+        AND column_name = 'tenant_id'
+        LIMIT 1
+      `)
+      
+      const hasTenantIdColumn = columnCheck.length > 0
+      
+      if (hasTenantIdColumn) {
+        // Coluna existe, usar Prisma normalmente
+        fullUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            role: true,
+            tenant_id: true,
+          },
+        })
+      } else {
+        // Coluna não existe, usar SQL direto
+        const users = await prisma.$queryRawUnsafe<Array<{
+          id: string
+          username: string
+          name: string
+          role: string
+          tenant_id?: string | null
+        }>>(`
+          SELECT id, username, name, role, tenant_id
+          FROM users
+          WHERE id = $1
+          LIMIT 1
+        `, user.id)
+        
+        fullUser = users[0] || null
+      }
     } catch (prismaError: any) {
       console.error('Erro ao buscar usuário no Prisma:', prismaError)
       console.error('Código do erro:', prismaError?.code)
       console.error('Mensagem:', prismaError?.message)
       
-      // Se for erro de conexão ou tabela não existe
-      if (prismaError?.code === 'P1001' || prismaError?.code === 'P2021') {
+      // Se for erro P2022 (coluna não existe), tentar SQL direto
+      if (prismaError?.code === 'P2022') {
+        try {
+          const users = await prisma.$queryRawUnsafe<Array<{
+            id: string
+            username: string
+            name: string
+            role: string
+          }>>(`
+            SELECT id, username, name, role
+            FROM users
+            WHERE id = $1
+            LIMIT 1
+          `, user.id)
+          
+          fullUser = users[0] ? { ...users[0], tenant_id: null } : null
+        } catch (sqlError) {
+          console.error('Erro ao buscar usuário via SQL direto:', sqlError)
+          throw new Error(`Erro ao buscar usuário: ${sqlError}`)
+        }
+      } else if (prismaError?.code === 'P1001' || prismaError?.code === 'P2021') {
         return NextResponse.json(
           { 
             success: false, 
@@ -94,9 +144,9 @@ export async function POST(request: NextRequest) {
           },
           { status: 500 }
         )
+      } else {
+        throw new Error(`Erro ao buscar usuário: ${prismaError.message}`)
       }
-      
-      throw new Error(`Erro ao buscar usuário: ${prismaError.message}`)
     }
 
     if (!fullUser) {
