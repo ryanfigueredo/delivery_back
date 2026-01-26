@@ -10,19 +10,21 @@ export async function GET(request: NextRequest) {
   try {
     // Verificar autenticação: pode ser por sessão (web), API_KEY (app) ou Basic Auth (app mobile)
     const session = await getSession()
-    let authValidation = { isValid: false, response: null as any }
-    let basicAuth = { isValid: false, user: null as any }
+    let authValidation: { isValid: boolean; tenant?: any; response?: any } = { isValid: false }
+    let basicAuth: { isValid: boolean; user?: any } = { isValid: false }
     
     try {
       authValidation = await validateApiKey(request)
     } catch (error) {
       console.log('Erro ao validar API key:', error)
+      authValidation = { isValid: false }
     }
     
     try {
       basicAuth = await validateBasicAuth(request)
     } catch (error) {
       console.log('Erro ao validar Basic Auth:', error)
+      basicAuth = { isValid: false }
     }
     
     // Se não tem sessão, API_KEY válida nem Basic Auth válida, retorna erro
