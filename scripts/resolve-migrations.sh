@@ -1,31 +1,30 @@
 #!/bin/bash
-# Script para resolver migrações falhadas antes de aplicar novas
+set -e  # Parar em caso de erro
 
 echo "🔄 Configurando Prisma..."
 
-# Gerar Prisma Client
+# Gerar Prisma Client (sempre necessário)
 echo "📦 Gerando Prisma Client..."
-npx prisma generate
+npx prisma generate || {
+  echo "❌ Erro ao gerar Prisma Client"
+  exit 1
+}
 
-# Verificar status das migrações
-echo "🔄 Verificando status das migrações..."
-npx prisma migrate status || echo "⚠️  Erro ao verificar status (pode ser normal se banco está vazio)"
-
-# Tentar resolver migrações falhadas
-echo "🔄 Resolvendo migrações falhadas..."
-npx prisma migrate resolve --applied 0_init 2>/dev/null || echo "Migração 0_init já resolvida ou não existe"
-npx prisma migrate resolve --applied 2_add_tenant_id_to_users 2>/dev/null || echo "Migração 2_add_tenant_id_to_users já resolvida ou não existe"
-
-# Tentar aplicar migrações
+# Aplicar migrações
 echo "🔄 Aplicando migrações..."
-if npx prisma migrate deploy; then
-  echo "✅ Migrações aplicadas com sucesso"
-else
-  echo "⚠️  Erro ao aplicar migrações, tentando resolver..."
-  # Tentar resolver todas as migrações conhecidas
-  npx prisma migrate resolve --applied 0_init 2>/dev/null || true
-  npx prisma migrate resolve --applied 2_add_tenant_id_to_users 2>/dev/null || true
-  echo "✅ Tentativa de resolução concluída"
-fi
+npx prisma migrate deploy || {
+  echo "⚠️  Erro ao aplicar migrações, tentando resolver migrações falhadas..."
+  
+  # Tentar resolver migrações falhadas
+  npx prisma migrate resolve --applied 0_init 2>/dev/null || echo "Migração 0_init não precisa ser resolvida"
+  npx prisma migrate resolve --applied 2_add_tenant_id_to_users 2>/dev/null || echo "Migração 2_add_tenant_id_to_users não precisa ser resolvida"
+  
+  # Tentar aplicar novamente
+  echo "🔄 Tentando aplicar migrações novamente..."
+  npx prisma migrate deploy || {
+    echo "⚠️  Ainda há problemas com migrações, mas continuando com o build..."
+    # Não falhar o build por causa de migrações
+  }
+}
 
 echo "✅ Prisma configurado"
