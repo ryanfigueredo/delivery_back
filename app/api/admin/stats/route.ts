@@ -86,16 +86,23 @@ export async function GET(request: NextRequest) {
     lastWeekStart.setDate(weekStart.getDate() - 7)
     const lastWeekEnd = new Date(weekStart)
 
-    // Verificar se tabela orders existe
-    const ordersTableExists = await prisma.$queryRawUnsafe<Array<{ table_name: string }>>(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'orders'
-      LIMIT 1
-    `)
+    // Verificar se tabela orders existe e tratar erros
+    let ordersTableExists = false
+    try {
+      const tableCheck = await prisma.$queryRawUnsafe<Array<{ table_name: string }>>(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'orders'
+        LIMIT 1
+      `)
+      ordersTableExists = tableCheck.length > 0
+    } catch (error) {
+      console.log('Erro ao verificar tabela orders, assumindo que não existe:', error)
+      ordersTableExists = false
+    }
 
-    if (ordersTableExists.length === 0) {
+    if (!ordersTableExists) {
       // Tabela orders não existe, retornar dados vazios
       return NextResponse.json({
         success: true,
@@ -123,100 +130,154 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Pedidos de hoje
-    const todayOrders = await prisma.order.count({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: today,
+    // Pedidos de hoje - com tratamento de erro
+    let todayOrders = 0
+    let todayRevenue: any = { _sum: { total_price: null } }
+    try {
+      todayOrders = await prisma.order.count({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: today,
+          },
         },
-      },
-    })
+      })
 
-    // Receita de hoje
-    const todayRevenue = await prisma.order.aggregate({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: today,
+      // Receita de hoje
+      todayRevenue = await prisma.order.aggregate({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: today,
+          },
+          status: {
+            in: ['printed', 'finished', 'out_for_delivery'],
+          },
         },
-        status: {
-          in: ['printed', 'finished', 'out_for_delivery'],
+        _sum: {
+          total_price: true,
         },
-      },
-      _sum: {
-        total_price: true,
-      },
-    })
+      })
+    } catch (orderError: any) {
+      console.error('Erro ao buscar pedidos de hoje:', orderError)
+      if (orderError?.code === 'P2022' || orderError?.code === 'P2021') {
+        // Tabela ou coluna não existe, retornar dados vazios
+        return NextResponse.json({
+          success: true,
+          stats: {
+            today: {
+              orders: 0,
+              revenue: 0,
+              revenueFormatted: 'R$ 0,00',
+            },
+            week: {
+              orders: 0,
+              revenue: 0,
+              revenueFormatted: 'R$ 0,00',
+              ordersChange: 0,
+              revenueChange: 0,
+            },
+            pendingOrders: 0,
+            dailyStats: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(day => ({
+              day,
+              orders: 0,
+              revenue: 0,
+            })),
+            ...(isSuperAdmin && { totalRestaurants: 0 }),
+          },
+        })
+      }
+      throw orderError
+    }
 
     // Pedidos da semana atual
-    const weekOrders = await prisma.order.count({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: weekStart,
+    let weekOrders = 0
+    let weekRevenue: any = { _sum: { total_price: null } }
+    let lastWeekOrders = 0
+    let lastWeekRevenue: any = { _sum: { total_price: null } }
+    let ordersByDay: any[] = []
+    
+    try {
+      weekOrders = await prisma.order.count({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: weekStart,
+          },
         },
-      },
-    })
+      })
 
-    // Receita da semana atual
-    const weekRevenue = await prisma.order.aggregate({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: weekStart,
+      // Receita da semana atual
+      weekRevenue = await prisma.order.aggregate({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: weekStart,
+          },
+          status: {
+            in: ['printed', 'finished', 'out_for_delivery'],
+          },
         },
-        status: {
-          in: ['printed', 'finished', 'out_for_delivery'],
+        _sum: {
+          total_price: true,
         },
-      },
-      _sum: {
-        total_price: true,
-      },
-    })
+      })
 
-    // Pedidos da semana passada (para comparação)
-    const lastWeekOrders = await prisma.order.count({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: lastWeekStart,
-          lt: lastWeekEnd,
+      // Pedidos da semana passada (para comparação)
+      lastWeekOrders = await prisma.order.count({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: lastWeekStart,
+            lt: lastWeekEnd,
+          },
         },
-      },
-    })
+      })
 
-    // Receita da semana passada
-    const lastWeekRevenue = await prisma.order.aggregate({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: lastWeekStart,
-          lt: lastWeekEnd,
+      // Receita da semana passada
+      lastWeekRevenue = await prisma.order.aggregate({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: lastWeekStart,
+            lt: lastWeekEnd,
+          },
+          status: {
+            in: ['printed', 'finished', 'out_for_delivery'],
+          },
         },
-        status: {
-          in: ['printed', 'finished', 'out_for_delivery'],
+        _sum: {
+          total_price: true,
         },
-      },
-      _sum: {
-        total_price: true,
-      },
-    })
+      })
 
-    // Pedidos por dia da semana atual
-    const ordersByDay = await prisma.order.findMany({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        created_at: {
-          gte: weekStart,
+      // Pedidos por dia da semana atual
+      ordersByDay = await prisma.order.findMany({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          created_at: {
+            gte: weekStart,
+          },
         },
-      },
-      select: {
-        created_at: true,
-        total_price: true,
-        status: true,
-      },
-    })
+        select: {
+          created_at: true,
+          total_price: true,
+          status: true,
+        },
+      })
+    } catch (orderError: any) {
+      console.error('Erro ao buscar pedidos da semana:', orderError)
+      // Se der erro, usar valores padrão (zeros)
+      if (orderError?.code === 'P2022' || orderError?.code === 'P2021') {
+        weekOrders = 0
+        weekRevenue = { _sum: { total_price: null } }
+        lastWeekOrders = 0
+        lastWeekRevenue = { _sum: { total_price: null } }
+        ordersByDay = []
+      } else {
+        throw orderError
+      }
+    }
 
     // Agrupar por dia
     const dailyStats: Record<string, { orders: number; revenue: number }> = {}
@@ -250,12 +311,22 @@ export async function GET(request: NextRequest) {
     })
 
     // Pedidos pendentes
-    const pendingOrders = await prisma.order.count({
-      where: {
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-        status: 'pending',
-      },
-    })
+    let pendingOrders = 0
+    try {
+      pendingOrders = await prisma.order.count({
+        where: {
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          status: 'pending',
+        },
+      })
+    } catch (error: any) {
+      console.error('Erro ao buscar pedidos pendentes:', error)
+      if (error?.code === 'P2022' || error?.code === 'P2021') {
+        pendingOrders = 0
+      } else {
+        throw error
+      }
+    }
 
     // Total de restaurantes (apenas para super admin)
     let totalRestaurants = 0
