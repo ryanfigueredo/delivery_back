@@ -36,18 +36,38 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   console.log("[Meta Webhook] POST recebido");
   try {
-    const { handler } = await import("@/lib/whatsapp-bot/cloud-api-handler");
     const body = await request.json();
+
+    // === DEBUG: Log completo do webhook ===
+    const phoneNumberId =
+      body?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+    const wabaId = body?.entry?.[0]?.id;
+    console.log("[Meta Webhook] DEBUG - JSON completo:", JSON.stringify(body));
+    console.log(
+      "[Meta Webhook] DEBUG - entry[0].changes[0].value.metadata.phone_number_id:",
+      phoneNumberId,
+      "| tipo:",
+      typeof phoneNumberId
+    );
+    console.log(
+      "[Meta Webhook] DEBUG - entry[0].id (WABA ID):",
+      wabaId,
+      "| tipo:",
+      typeof wabaId
+    );
+    // === Fim DEBUG ===
+
+    const { handler } = await import("@/lib/whatsapp-bot/cloud-api-handler");
     const entries = body?.entry || [];
     const firstMsg = entries[0]?.changes?.[0]?.value?.messages?.[0];
     console.log(
       "[Meta Webhook] Entries:",
       entries.length,
       "phone_number_id:",
-      entries[0]?.changes?.[0]?.value?.metadata?.phone_number_id,
+      phoneNumberId,
       "msg:",
       firstMsg?.type,
-      firstMsg?.text?.body?.substring(0, 30),
+      firstMsg?.text?.body?.substring(0, 30)
     );
     const event = {
       requestContext: { http: { method: "POST" } },
