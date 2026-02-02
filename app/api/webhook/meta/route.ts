@@ -34,9 +34,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log("[Meta Webhook] POST recebido");
   try {
     const { handler } = await import("@/lib/whatsapp-bot/cloud-api-handler");
     const body = await request.json();
+    const entries = body?.entry || [];
+    const firstMsg = entries[0]?.changes?.[0]?.value?.messages?.[0];
+    console.log(
+      "[Meta Webhook] Entries:",
+      entries.length,
+      "phone_number_id:",
+      entries[0]?.changes?.[0]?.value?.metadata?.phone_number_id,
+      "msg:",
+      firstMsg?.type,
+      firstMsg?.text?.body?.substring(0, 30),
+    );
     const event = {
       requestContext: { http: { method: "POST" } },
       rawQueryString: "",
