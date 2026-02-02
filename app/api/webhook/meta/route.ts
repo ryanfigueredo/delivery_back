@@ -222,6 +222,12 @@ export async function POST(request: NextRequest) {
   }
 
   const entries = (body?.entry as Array<Record<string, unknown>>) || [];
+  console.log(
+    "[Webhook] entries:",
+    entries.length,
+    "messages:",
+    (entries[0] as any)?.changes?.[0]?.value?.messages?.length
+  );
 
   for (const entry of entries) {
     const entryChanges =
@@ -231,6 +237,10 @@ export async function POST(request: NextRequest) {
       const val = (ch?.value as Record<string, unknown>) || {};
       const messages = (val?.messages as Array<Record<string, unknown>>) || [];
       const metadata = (val?.metadata as Record<string, unknown>) || {};
+      const contacts = (val?.contacts as Array<{ wa_id?: string }>) || [];
+      const displayPhone = (
+        (metadata?.display_phone_number as string) || ""
+      ).replace(/\D/g, "");
       const phoneNumberIdRaw = metadata?.phone_number_id;
       const phoneNumberId =
         phoneNumberIdRaw != null ? String(phoneNumberIdRaw) : undefined;
@@ -270,10 +280,17 @@ export async function POST(request: NextRequest) {
       const nomeRestaurante = clientConfig.nome_do_cliente || "Pedidos Express";
 
       for (const msg of messages) {
-        const from = msg?.from as string | undefined;
+        let from = msg?.from as string | undefined;
         const messageType = msg?.type as string | undefined;
 
+        // Fallback: se from = número do negócio (bug Meta em button_reply), usar contacts
+        const fromNorm = String(from || "").replace(/\D/g, "");
+        if (fromNorm === displayPhone && contacts[0]?.wa_id) {
+          from = contacts[0].wa_id;
+        }
         if (!from) continue;
+
+        console.log("[Webhook] msg from:", from, "type:", messageType);
 
         let messageText = "";
         let isInteractive = false;
@@ -283,7 +300,7 @@ export async function POST(request: NextRequest) {
         if (messageType === "text") {
           const textObj = msg?.text as { body?: string } | undefined;
           messageText = textObj?.body || "";
-        } else if (messageType === "interactive") {
+        } else if (messageType === "interactive" || messageType === "button") {
           isInteractive = true;
           const interactive = msg?.interactive as
             | Record<string, unknown>
@@ -295,18 +312,25 @@ export async function POST(request: NextRequest) {
             | { id?: string; title?: string }
             | undefined;
           if (buttonReply) {
-            interactiveId = String(buttonReply.id || "");
-            interactiveTitle = String(buttonReply.title || "");
+            interactiveId = String(buttonReply.id || "").toLowerCase();
+            interactiveTitle = String(buttonReply.title || "")
+              .replace(/[^\w\sáàâãéèêíìîóòôõúùûç]/gi, "")
+              .trim();
           } else if (listReply) {
-            interactiveId = String(listReply.id || "");
+            interactiveId = String(listReply.id || "").toLowerCase();
             interactiveTitle = String(listReply.title || "");
           }
-          messageText = interactiveTitle || interactiveId;
+          messageText = interactiveId || interactiveTitle;
         }
 
         if (!messageText && !isInteractive) continue;
 
-        const msgTrim = messageText.trim().toLowerCase();
+        const msgTrim = (messageText || "")
+          .replace(/[^\w\sáàâãéèêíìîóòôõúùûç]/gi, "")
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, ""); // remove acentos
         const hora = new Date().getHours();
         const saudacao =
           hora >= 18 ? "Boa noite" : hora >= 12 ? "Boa tarde" : "Bom dia";
@@ -316,6 +340,7 @@ export async function POST(request: NextRequest) {
           (t) => msgTrim === t || msgTrim.includes(t)
         );
         if (isWelcome) {
+          console.log("[Webhook] Enviando welcome para", from);
           const bodyText = `*${nomeRestaurante}*\n\n${saudacao}! 👋\n\nEscolha uma opção abaixo:`;
           await sendButtons(
             from,
@@ -334,10 +359,11 @@ export async function POST(request: NextRequest) {
         // Cardápio (botão ou texto)
         const isCardapio =
           msgTrim === "cardapio" ||
-          msgTrim === "cardápio" ||
+          msgTrim.includes("cardapio") ||
           msgTrim === "1" ||
           interactiveId === "cardapio";
         if (isCardapio) {
+          console.log("[Webhook] Enviando cardápio para", from);
           const items = await fetchMenu(clientConfig);
           const hamburgueres = items.filter(
             (i) =>
@@ -410,8 +436,12 @@ export async function POST(request: NextRequest) {
 
         // Resumo
         const isResumo =
-          msgTrim === "resumo" || msgTrim === "2" || interactiveId === "resumo";
+          msgTrim === "resumo" ||
+          msgTrim.includes("resumo") ||
+          msgTrim === "2" ||
+          interactiveId === "resumo";
         if (isResumo) {
+          console.log("[Webhook] Enviando resumo para", from);
           await sendText(
             from,
             `*${nomeRestaurante}*\n\n🛒 Você ainda não tem itens no pedido.\n\nDigite *1* ou *Cardápio* para ver o menu.`,
@@ -428,6 +458,7 @@ export async function POST(request: NextRequest) {
           msgTrim === "3" ||
           interactiveId === "atendente";
         if (isAtendente) {
+          console.log("[Webhook] Enviando atendente para", from);
           await sendText(
             from,
             `*${nomeRestaurante}*\n\n👋 Um atendente vai te responder em breve.\n\nEnquanto isso, você pode continuar fazendo seu pedido! 😊`,
