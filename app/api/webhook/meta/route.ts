@@ -12,7 +12,7 @@ export const maxDuration = 30;
 
 export async function GET(request: NextRequest) {
   try {
-    const { handler } = await import("saas-rfid-bot/handler");
+    const { handler } = await import("@/lib/whatsapp-bot/cloud-api-handler");
     const q = Object.fromEntries(request.nextUrl.searchParams);
     const event = {
       requestContext: { http: { method: "GET" } },
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { handler } = await import("saas-rfid-bot/handler");
+    const { handler } = await import("@/lib/whatsapp-bot/cloud-api-handler");
     const body = await request.json();
     const event = {
       requestContext: { http: { method: "POST" } },
