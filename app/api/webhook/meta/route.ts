@@ -14,22 +14,35 @@ const VERIFY_TOKEN =
   process.env.WHATSAPP_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN || "";
 
 export async function GET(request: NextRequest) {
-  const mode = request.nextUrl.searchParams.get("hub.mode");
-  const token = request.nextUrl.searchParams.get("hub.verify_token");
-  const challenge = request.nextUrl.searchParams.get("hub.challenge");
+  const params = request.nextUrl.searchParams;
+  const mode =
+    params.get("hub.mode") || params.get("hub_mode") || params.get("mode");
+  const token =
+    params.get("hub.verify_token") ||
+    params.get("hub_verify_token") ||
+    params.get("verify_token");
+  const challenge =
+    params.get("hub.challenge") ||
+    params.get("hub_challenge") ||
+    params.get("challenge");
 
   if (mode === "subscribe" && token === VERIFY_TOKEN && challenge) {
+    console.log("[Meta Webhook] Verificação OK - retornando challenge");
     return new NextResponse(challenge, {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
   }
 
-  console.warn("[Meta Webhook] Verificação falhou:", {
-    mode,
-    tokenMatch: token === VERIFY_TOKEN,
-    hasVerifyToken: !!VERIFY_TOKEN,
-  });
+  if (!mode && !token) {
+    console.log("[Meta Webhook] GET sem params (não é verificação Meta)");
+  } else {
+    console.warn("[Meta Webhook] Verificação falhou:", {
+      mode,
+      tokenMatch: token === VERIFY_TOKEN,
+      hasVerifyToken: !!VERIFY_TOKEN,
+    });
+  }
   return new NextResponse("Forbidden", { status: 403 });
 }
 
