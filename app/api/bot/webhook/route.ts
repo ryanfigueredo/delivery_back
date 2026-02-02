@@ -86,9 +86,16 @@ async function sendTextMessage(
     );
     if (!res.ok) {
       const err = await res.text();
-      console.error("[Webhook] Erro ao enviar texto:", res.status, err);
+      console.error(
+        "[Webhook] Erro ao enviar texto:",
+        res.status,
+        err,
+        "| to:",
+        phone
+      );
       return false;
     }
+    console.log("[Webhook] Texto enviado OK para", phone);
     return true;
   } catch (e) {
     console.error("[Webhook] Erro ao enviar:", e);
@@ -145,9 +152,16 @@ async function sendListMessage(
     );
     if (!res.ok) {
       const err = await res.text();
-      console.error("[Webhook] Erro ao enviar List Message:", res.status, err);
+      console.error(
+        "[Webhook] Erro ao enviar List Message:",
+        res.status,
+        err,
+        "| to:",
+        phone
+      );
       return false;
     }
+    console.log("[Webhook] List enviada OK para", phone);
     return true;
   } catch (e) {
     console.error("[Webhook] Erro ao enviar List:", e);
@@ -328,7 +342,9 @@ export async function POST(request: NextRequest) {
           "type:",
           messageType,
           "text:",
-          messageText?.slice(0, 30)
+          messageText?.slice(0, 30),
+          "phone_number_id:",
+          phoneNumberId
         );
 
         if (isInteractive && interactiveId) {
@@ -337,23 +353,40 @@ export async function POST(request: NextRequest) {
             interactiveTitle,
             clientConfig
           );
-          await sendTextMessage(
+          console.log(
+            "[Webhook] Interactive reply para",
+            from,
+            "reply:",
+            reply?.slice(0, 50)
+          );
+          const sentInteractive = await sendTextMessage(
             from,
             reply,
             phoneNumberId,
             clientConfig.token_api_meta
           );
+          console.log(
+            "[Webhook] sendTextMessage (interactive) resultado:",
+            sentInteractive
+          );
           continue;
         }
 
         const { text, sendList } = resolveTextReply(messageText, clientConfig);
+        console.log(
+          "[Webhook] Enviando texto para",
+          from,
+          "sendList:",
+          sendList
+        );
 
-        await sendTextMessage(
+        const sent1 = await sendTextMessage(
           from,
           text,
           phoneNumberId,
           clientConfig.token_api_meta
         );
+        console.log("[Webhook] sendTextMessage resultado:", sent1);
 
         if (sendList && (clientConfig.options || []).length > 0) {
           const listBody =

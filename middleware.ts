@@ -1,79 +1,93 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Rate limiting simples em memória (para produção, usar Redis)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 function getRateLimitKey(request: NextRequest): string {
   // Usar IP do cliente
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-  return ip
+  const ip = request.ip || request.headers.get("x-forwarded-for") || "unknown";
+  return ip;
 }
 
 function checkRateLimit(request: NextRequest): boolean {
-  const key = getRateLimitKey(request)
-  const now = Date.now()
-  const limit = 100 // 100 requisições
-  const window = 60000 // por minuto
+  const key = getRateLimitKey(request);
+  const now = Date.now();
+  const limit = 100; // 100 requisições
+  const window = 60000; // por minuto
 
-  const record = rateLimitMap.get(key)
+  const record = rateLimitMap.get(key);
 
   if (!record || now > record.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + window })
-    return true
+    rateLimitMap.set(key, { count: 1, resetTime: now + window });
+    return true;
   }
 
   if (record.count >= limit) {
-    return false
+    return false;
   }
 
-  record.count++
-  return true
+  record.count++;
+  return true;
 }
 
 // Limpar map antigo periodicamente
 setInterval(() => {
-  const now = Date.now()
+  const now = Date.now();
   for (const [key, record] of rateLimitMap.entries()) {
     if (now > record.resetTime) {
-      rateLimitMap.delete(key)
+      rateLimitMap.delete(key);
     }
   }
-}, 60000) // Limpar a cada minuto
+}, 60000); // Limpar a cada minuto
 
 export function middleware(request: NextRequest) {
-  const sessionCookie = request.cookies.get('session')
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const isSuportePage = request.nextUrl.pathname.startsWith('/suporte')
-  const isPrivacidadePage = request.nextUrl.pathname.startsWith('/privacidade')
-  const isHomePage = request.nextUrl.pathname === '/'
-  const isVendasPage = request.nextUrl.pathname === '/vendas'
-  const isApiAuth = request.nextUrl.pathname.startsWith('/api/auth')
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  const sessionCookie = request.cookies.get("session");
+  const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isSuportePage = request.nextUrl.pathname.startsWith("/suporte");
+  const isPrivacidadePage = request.nextUrl.pathname.startsWith("/privacidade");
+  const isHomePage = request.nextUrl.pathname === "/";
+  const isVendasPage = request.nextUrl.pathname === "/vendas";
+  const isApiAuth = request.nextUrl.pathname.startsWith("/api/auth");
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+  const isWebhook =
+    request.nextUrl.pathname.startsWith("/api/webhook") ||
+    request.nextUrl.pathname.startsWith("/api/bot/webhook");
 
-  // Rate limiting para APIs (exceto auth)
-  if (isApiRoute && !isApiAuth) {
+  // Rate limiting para APIs (exceto auth e webhook Meta)
+  if (isApiRoute && !isApiAuth && !isWebhook) {
     if (!checkRateLimit(request)) {
       return NextResponse.json(
-        { error: 'Too Many Requests', message: 'Rate limit exceeded. Please try again later.' },
+        {
+          error: "Too Many Requests",
+          message: "Rate limit exceeded. Please try again later.",
+        },
         { status: 429 }
-      )
+      );
     }
   }
 
   // Permitir acesso às páginas públicas (home, vendas, login, suporte, privacidade) e APIs
-  if (isHomePage || isVendasPage || isAuthPage || isSuportePage || isPrivacidadePage || isApiAuth || isApiRoute) {
-    return NextResponse.next()
+  if (
+    isHomePage ||
+    isVendasPage ||
+    isAuthPage ||
+    isSuportePage ||
+    isPrivacidadePage ||
+    isApiAuth ||
+    isApiRoute
+  ) {
+    return NextResponse.next();
   }
 
   // Se não tem sessão e não está na página pública, redirecionar
   if (!sessionCookie) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
 export const config = {
@@ -85,6 +99,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};
