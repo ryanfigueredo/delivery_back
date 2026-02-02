@@ -1,33 +1,36 @@
 /**
  * Webhook do Meta (WhatsApp Cloud API)
- * Recebe mensagens e eventos do WhatsApp diretamente na Vercel.
- * URL de callback no Meta: https://delivery-back-eosin.vercel.app/api/webhook/meta
- * Verificar token: WHATSAPP_VERIFY_TOKEN (env)
+ * URL: https://delivery-back-eosin.vercel.app/api/webhook/meta
+ * OBRIGATÓRIO na Vercel: WHATSAPP_VERIFY_TOKEN (Settings → Environment Variables)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+export const runtime = "nodejs";
+
+const VERIFY_TOKEN =
+  process.env.WHATSAPP_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN || "";
 
 export async function GET(request: NextRequest) {
-  try {
-    const { handler } = await import("@/lib/whatsapp-bot/cloud-api-handler");
-    const q = Object.fromEntries(request.nextUrl.searchParams);
-    const event = {
-      requestContext: { http: { method: "GET" } },
-      rawQueryString: request.nextUrl.searchParams.toString(),
-      queryStringParameters: Object.keys(q).length ? q : null,
-    };
-    const result = await handler(event, {});
-    return new NextResponse(result.body ?? "", {
-      status: result.statusCode ?? 200,
-      headers: result.headers ?? { "Content-Type": "text/plain" },
+  const mode = request.nextUrl.searchParams.get("hub.mode");
+  const token = request.nextUrl.searchParams.get("hub.verify_token");
+  const challenge = request.nextUrl.searchParams.get("hub.challenge");
+
+  if (mode === "subscribe" && token === VERIFY_TOKEN && challenge) {
+    return new NextResponse(challenge, {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
     });
-  } catch (error: any) {
-    console.error("[Meta Webhook] GET verify error:", error);
-    return new NextResponse("Forbidden", { status: 403 });
   }
+
+  console.warn("[Meta Webhook] Verificação falhou:", {
+    mode,
+    tokenMatch: token === VERIFY_TOKEN,
+    hasVerifyToken: !!VERIFY_TOKEN,
+  });
+  return new NextResponse("Forbidden", { status: 403 });
 }
 
 export async function POST(request: NextRequest) {
