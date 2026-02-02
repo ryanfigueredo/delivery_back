@@ -1,6 +1,6 @@
 /**
  * Webhook do Meta (WhatsApp Cloud API)
- * URL: https://delivery-back-eosin.vercel.app/api/webhook/meta
+ * URL: https://pedidos-express-api.vercel.app/api/webhook/meta
  * OBRIGATÓRIO na Vercel: WHATSAPP_VERIFY_TOKEN (Settings → Environment Variables)
  */
 

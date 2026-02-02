@@ -1,6 +1,6 @@
 /**
  * Teste: confirma se o webhook está recebendo requests.
- * GET: curl "https://SEU-DOMINIO.vercel.app/api/webhook/meta/test"
+ * GET: curl "https://pedidos-express-api.vercel.app/api/webhook/meta/test"
  * POST: simula o que a Meta envia
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       "[Meta Webhook TEST] phone_number_id:",
       phoneId,
       "body keys:",
-      Object.keys(body || {}),
+      Object.keys(body || {})
     );
     return NextResponse.json({ ok: true, phone_number_id: phoneId });
   } catch (e) {
