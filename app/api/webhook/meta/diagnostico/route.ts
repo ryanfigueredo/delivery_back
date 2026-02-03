@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
+  // Número de produção Tamboril (+55 21 99904-4219)
   const phoneNumberId = process.env.PHONE_NUMBER_ID || "983471751512371";
   const result: Record<string, unknown> = {
     ok: false,
@@ -21,7 +22,7 @@ export async function GET() {
   const hasVerifyToken = !!(
     process.env.WHATSAPP_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN
   );
-  const tableName = process.env.DYNAMODB_TABLE_NAME || "whatsapp-bot-configs";
+  const tableName = process.env.DYNAMODB_TABLE_NAME || "bot-delivery";
 
   result.checks = {
     aws_configured: hasAwsKey && hasAwsSecret,
@@ -52,7 +53,7 @@ export async function GET() {
       result.ok = false;
       result.erro =
         `Config NÃO encontrada no DynamoDB para phone_number_id=${phoneNumberId}. ` +
-        `Rode: cd bot && DYNAMODB_TABLE_NAME=${tableName} node add-tamboril-client.js`;
+        `Rode: cd bot && DYNAMODB_TABLE_NAME=bot-delivery node add-tamboril-client.js`;
       return NextResponse.json(result);
     }
 
