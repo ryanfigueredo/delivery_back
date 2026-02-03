@@ -75,7 +75,12 @@ async function sendTextMessage(
   const phone = String(to).replace(/\D/g, "");
   if (!phone) return false;
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
-  console.log("[Meta API] Número destino (wa_id, só dígitos):", phone, "| len:", phone.length);
+  console.log(
+    "[Meta API] Número destino (wa_id, só dígitos):",
+    phone,
+    "| len:",
+    phone.length
+  );
   const tokenPreview = accessToken
     ? `${accessToken.slice(0, 4)}...${accessToken.slice(-4)}`
     : "(vazio)";
@@ -396,224 +401,248 @@ function buildFallbackConfig(phoneNumberId: string): WhatsAppClientConfig {
 }
 
 async function processWebhookPayload(body: Record<string, unknown>) {
-  console.log("[Webhook] processWebhookPayload iniciado, entries:", (body?.entry as unknown[])?.length ?? 0);
+  console.log(
+    "[Webhook] processWebhookPayload iniciado, entries:",
+    (body?.entry as unknown[])?.length ?? 0
+  );
   try {
     const entries = (body?.entry as Array<Record<string, unknown>>) || [];
 
     for (const entry of entries) {
-    const entryChanges =
-      (entry?.changes as Array<Record<string, unknown>>) || [];
+      const entryChanges =
+        (entry?.changes as Array<Record<string, unknown>>) || [];
 
-    for (const ch of entryChanges) {
-      const val = (ch?.value as Record<string, unknown>) || {};
-      const messages = (val?.messages as Array<Record<string, unknown>>) || [];
-      const metadata = (val?.metadata as Record<string, unknown>) || {};
-      const phoneNumberIdRaw = metadata?.phone_number_id;
-      const phoneNumberId =
-        phoneNumberIdRaw != null ? String(phoneNumberIdRaw) : undefined;
+      for (const ch of entryChanges) {
+        const val = (ch?.value as Record<string, unknown>) || {};
+        const messages =
+          (val?.messages as Array<Record<string, unknown>>) || [];
+        const metadata = (val?.metadata as Record<string, unknown>) || {};
+        const phoneNumberIdRaw = metadata?.phone_number_id;
+        const phoneNumberId =
+          phoneNumberIdRaw != null ? String(phoneNumberIdRaw) : undefined;
 
-      if (!phoneNumberId) continue;
+        if (!phoneNumberId) continue;
 
-      let clientConfig: WhatsAppClientConfig | null = null;
-      try {
-        if (isWhatsAppDynamoEnabled()) {
-          console.log("[Webhook] Buscando config DynamoDB para phoneNumberId:", phoneNumberId);
-          clientConfig = await getWhatsAppClientConfig(phoneNumberId);
-          console.log("[Webhook] getWhatsAppClientConfig retornou, config:", !!clientConfig);
-        }
-      } catch (e) {
-        console.error("[Webhook] Erro ao buscar config:", e);
-      }
-
-      console.log("[Webhook] Config encontrada:", !!clientConfig, "| phoneNumberId:", phoneNumberId);
-
-      if (!clientConfig) {
-        const fallbackToken = process.env.TOKEN_API_META;
-        if (fallbackToken) {
-          console.log("[Webhook] Usando fallback de env (TOKEN_API_META)");
-          clientConfig = buildFallbackConfig(phoneNumberId);
-        } else {
-          console.error("[Webhook] Config não encontrada e sem TOKEN_API_META. phoneNumberId:", phoneNumberId);
-          continue;
-        }
-      }
-      if (clientConfig.enabled === false) continue;
-
-      for (const msg of messages) {
-        const from = msg?.from as string | undefined;
-        const messageType = msg?.type as string | undefined;
-
-        if (!from) continue;
-
-        let messageText = "";
-        let isInteractive = false;
-        let interactiveId = "";
-        let interactiveTitle = "";
-
-        if (messageType === "text") {
-          const textObj = msg?.text as { body?: string } | undefined;
-          messageText = textObj?.body || "";
-        } else if (messageType === "interactive" || messageType === "button") {
-          isInteractive = true;
-          const interactive = msg?.interactive as
-            | Record<string, unknown>
-            | undefined;
-          const buttonReply = interactive?.button_reply as
-            | { id?: string; title?: string }
-            | undefined;
-          const listReply = interactive?.list_reply as
-            | { id?: string; title?: string }
-            | undefined;
-          if (buttonReply) {
-            interactiveId = String(buttonReply.id || "");
-            interactiveTitle = String(buttonReply.title || "");
-          } else if (listReply) {
-            interactiveId = String(listReply.id || "");
-            interactiveTitle = String(listReply.title || "");
+        let clientConfig: WhatsAppClientConfig | null = null;
+        try {
+          if (isWhatsAppDynamoEnabled()) {
+            console.log(
+              "[Webhook] Buscando config DynamoDB para phoneNumberId:",
+              phoneNumberId
+            );
+            clientConfig = await getWhatsAppClientConfig(phoneNumberId);
+            console.log(
+              "[Webhook] getWhatsAppClientConfig retornou, config:",
+              !!clientConfig
+            );
           }
-          messageText = interactiveTitle;
+        } catch (e) {
+          console.error("[Webhook] Erro ao buscar config:", e);
         }
-
-        if (!messageText && !isInteractive) continue;
 
         console.log(
-          "[Webhook] from:",
-          from,
-          "type:",
-          messageType,
-          "text:",
-          messageText?.slice(0, 30),
-          "phone_number_id:",
+          "[Webhook] Config encontrada:",
+          !!clientConfig,
+          "| phoneNumberId:",
           phoneNumberId
         );
 
-        // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
-        const isRestaurante = isRestauranteConfig(clientConfig);
-        console.log(
-          "[Webhook] isRestauranteConfig:",
-          isRestaurante,
-          "| tenant_api_key:",
-          !!clientConfig?.tenant_api_key,
-          "| desktop_api_url:",
-          clientConfig?.desktop_api_url?.slice(0, 50)
-        );
-        if (isRestaurante) {
-          try {
-            const {
-              handleMessageRestaurante,
-            } = require("@/lib/whatsapp-bot/handlers-restaurante");
-            const config = {
-              ...clientConfig,
-              phone_number_id: clientConfig.phone_number_id || phoneNumberId,
-            };
-            // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente.
-            // Botões de hambúrguer (id 1,2,3,4 ou título "Bovino Simples", etc): usar TÍTULO
-            // para o handler fazer match por nome e evitar confusão com menu inicial (1=cardápio, 3=atendente).
-            let textForHandler = messageText;
-            const titleLower = (interactiveTitle || "").toLowerCase();
-            if (isInteractive) {
-              if (
-                titleLower.includes("cardápio") ||
-                titleLower.includes("cardapio")
-              )
-                textForHandler = "cardapio";
-              else if (titleLower.includes("resumo")) textForHandler = "resumo";
-              else if (titleLower.includes("atendente"))
-                textForHandler = "atendente";
-              else if (interactiveId === "opt_0") textForHandler = "cardapio";
-              else if (interactiveId === "opt_1") textForHandler = "resumo";
-              else if (interactiveId === "opt_2") textForHandler = "atendente";
-              else if (interactiveId === "voltar") textForHandler = "voltar";
-              else if (interactiveId === "upsell_sim") textForHandler = "sim";
-              else if (interactiveId === "upsell_nao") textForHandler = "nao";
-              else if (
-                interactiveId &&
-                !interactiveId.startsWith("opt_") &&
-                /^[1-9]\d*$/.test(interactiveId) &&
-                interactiveTitle
-              )
-                // Botão de item (1,2,3,4): passar TÍTULO para o handler (ex: "Bovino Simples")
-                textForHandler = interactiveTitle;
-              else if (interactiveId && !interactiveId.startsWith("opt_"))
-                textForHandler = interactiveId;
+        if (!clientConfig) {
+          const fallbackToken = process.env.TOKEN_API_META;
+          if (fallbackToken) {
+            console.log("[Webhook] Usando fallback de env (TOKEN_API_META)");
+            clientConfig = buildFallbackConfig(phoneNumberId);
+          } else {
+            console.error(
+              "[Webhook] Config não encontrada e sem TOKEN_API_META. phoneNumberId:",
+              phoneNumberId
+            );
+            continue;
+          }
+        }
+        if (clientConfig.enabled === false) continue;
+
+        for (const msg of messages) {
+          const from = msg?.from as string | undefined;
+          const messageType = msg?.type as string | undefined;
+
+          if (!from) continue;
+
+          let messageText = "";
+          let isInteractive = false;
+          let interactiveId = "";
+          let interactiveTitle = "";
+
+          if (messageType === "text") {
+            const textObj = msg?.text as { body?: string } | undefined;
+            messageText = textObj?.body || "";
+          } else if (
+            messageType === "interactive" ||
+            messageType === "button"
+          ) {
+            isInteractive = true;
+            const interactive = msg?.interactive as
+              | Record<string, unknown>
+              | undefined;
+            const buttonReply = interactive?.button_reply as
+              | { id?: string; title?: string }
+              | undefined;
+            const listReply = interactive?.list_reply as
+              | { id?: string; title?: string }
+              | undefined;
+            if (buttonReply) {
+              interactiveId = String(buttonReply.id || "");
+              interactiveTitle = String(buttonReply.title || "");
+            } else if (listReply) {
+              interactiveId = String(listReply.id || "");
+              interactiveTitle = String(listReply.title || "");
             }
-            console.log(
-              "[Webhook] Chamando handler | textForHandler:",
-              textForHandler,
-              "| from:",
-              from
-            );
-            const result = await handleMessageRestaurante(
-              from,
-              textForHandler,
-              config
-            );
-            console.log(
-              "[Handler] Resultado:",
-              JSON.stringify(result, null, 2)?.slice(0, 500) || result
-            );
-            if (result?.interactive) {
-              await sendInteractive(
-                from,
-                result.interactive as Record<string, unknown>,
-                phoneNumberId,
-                clientConfig.token_api_meta
+            messageText = interactiveTitle;
+          }
+
+          if (!messageText && !isInteractive) continue;
+
+          console.log(
+            "[Webhook] from:",
+            from,
+            "type:",
+            messageType,
+            "text:",
+            messageText?.slice(0, 30),
+            "phone_number_id:",
+            phoneNumberId
+          );
+
+          // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
+          const isRestaurante = isRestauranteConfig(clientConfig);
+          console.log(
+            "[Webhook] isRestauranteConfig:",
+            isRestaurante,
+            "| tenant_api_key:",
+            !!clientConfig?.tenant_api_key,
+            "| desktop_api_url:",
+            clientConfig?.desktop_api_url?.slice(0, 50)
+          );
+          if (isRestaurante) {
+            try {
+              const {
+                handleMessageRestaurante,
+              } = require("@/lib/whatsapp-bot/handlers-restaurante");
+              const config = {
+                ...clientConfig,
+                phone_number_id: clientConfig.phone_number_id || phoneNumberId,
+              };
+              // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente.
+              let textForHandler = messageText;
+              const titleLower = (interactiveTitle || "").toLowerCase();
+              if (isInteractive) {
+                if (
+                  titleLower.includes("cardápio") ||
+                  titleLower.includes("cardapio")
+                )
+                  textForHandler = "cardapio";
+                else if (titleLower.includes("resumo"))
+                  textForHandler = "resumo";
+                else if (titleLower.includes("atendente"))
+                  textForHandler = "atendente";
+                else if (interactiveId === "opt_0") textForHandler = "cardapio";
+                else if (interactiveId === "opt_1") textForHandler = "resumo";
+                else if (interactiveId === "opt_2")
+                  textForHandler = "atendente";
+                else if (interactiveId === "voltar") textForHandler = "voltar";
+                else if (interactiveId === "upsell_sim") textForHandler = "sim";
+                else if (interactiveId === "upsell_nao") textForHandler = "nao";
+                else if (
+                  interactiveId &&
+                  !interactiveId.startsWith("opt_") &&
+                  /^[1-9]\d*$/.test(interactiveId) &&
+                  interactiveTitle
+                )
+                  textForHandler = interactiveTitle;
+                else if (interactiveId && !interactiveId.startsWith("opt_"))
+                  textForHandler = interactiveId;
+              }
+              console.log(
+                "[Webhook] Chamando handler | textForHandler:",
+                textForHandler,
+                "| from:",
+                from
               );
-            } else if (result?.reply) {
+              const result = await handleMessageRestaurante(
+                from,
+                textForHandler,
+                config
+              );
+              console.log(
+                "[Handler] Resultado:",
+                JSON.stringify(result, null, 2)?.slice(0, 500) || result
+              );
+              if (result?.interactive) {
+                await sendInteractive(
+                  from,
+                  result.interactive as Record<string, unknown>,
+                  phoneNumberId,
+                  clientConfig.token_api_meta
+                );
+              } else if (result?.reply) {
+                await sendTextMessage(
+                  from,
+                  result.reply,
+                  phoneNumberId,
+                  clientConfig.token_api_meta
+                );
+              }
+            } catch (err) {
+              console.error("[Webhook] Erro handlers-restaurante:", err);
               await sendTextMessage(
                 from,
-                result.reply,
+                "❌ Ocorreu um erro. Tente novamente em instantes.",
                 phoneNumberId,
                 clientConfig.token_api_meta
               );
             }
-          } catch (err) {
-            console.error("[Webhook] Erro handlers-restaurante:", err);
+            continue;
+          }
+
+          // Fluxo simples (fallback)
+          if (isInteractive && interactiveId) {
+            const reply = resolveInteractiveReply(
+              interactiveId,
+              interactiveTitle,
+              clientConfig
+            );
             await sendTextMessage(
               from,
-              "❌ Ocorreu um erro. Tente novamente em instantes.",
+              reply,
               phoneNumberId,
               clientConfig.token_api_meta
             );
+            continue;
           }
-          continue;
-        }
 
-        // Fluxo simples (fallback)
-        if (isInteractive && interactiveId) {
-          const reply = resolveInteractiveReply(
-            interactiveId,
-            interactiveTitle,
+          const { text, sendList } = resolveTextReply(
+            messageText,
             clientConfig
           );
           await sendTextMessage(
             from,
-            reply,
+            text,
             phoneNumberId,
             clientConfig.token_api_meta
           );
-          continue;
-        }
 
-        const { text, sendList } = resolveTextReply(messageText, clientConfig);
-        await sendTextMessage(
-          from,
-          text,
-          phoneNumberId,
-          clientConfig.token_api_meta
-        );
-
-        if (sendList && (clientConfig.options || []).length > 0) {
-          const listBody =
-            "Como posso ajudar? Toque no botão abaixo para escolher:";
-          await sendListMessage(
-            from,
-            listBody,
-            "Opções",
-            clientConfig.options || [],
-            phoneNumberId,
-            clientConfig.token_api_meta
-          );
+          if (sendList && (clientConfig.options || []).length > 0) {
+            const listBody =
+              "Como posso ajudar? Toque no botão abaixo para escolher:";
+            await sendListMessage(
+              from,
+              listBody,
+              "Opções",
+              clientConfig.options || [],
+              phoneNumberId,
+              clientConfig.token_api_meta
+            );
+          }
         }
       }
     }
