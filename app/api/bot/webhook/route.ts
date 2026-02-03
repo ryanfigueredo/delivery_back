@@ -74,23 +74,26 @@ async function sendTextMessage(
 ): Promise<boolean> {
   const phone = String(to).replace(/\D/g, "");
   if (!phone) return false;
+  const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
+  const tokenPreview = accessToken
+    ? `${accessToken.slice(0, 4)}...${accessToken.slice(-4)}`
+    : "(vazio)";
+  console.log("[Meta API] Enviando para URL:", url);
+  console.log("[Meta API] Token (4 primeiros + 4 últimos):", tokenPreview);
   try {
-    const res = await fetch(
-      `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: phone,
-          type: "text",
-          text: { body: text },
-        }),
-      }
-    );
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "text",
+        text: { body: text },
+      }),
+    });
     const resData = await res.text();
     console.log(
       "[Meta API] Resposta sendTextMessage:",
@@ -110,7 +113,9 @@ async function sendTextMessage(
     console.log("[Webhook] Texto enviado OK para", phone);
     return true;
   } catch (e) {
-    console.error("[Webhook] Erro ao enviar:", e);
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("[Meta API] Erro de Rede:", err.message);
+    console.error("[Webhook] Erro ao enviar texto:", e);
     return false;
   }
 }
