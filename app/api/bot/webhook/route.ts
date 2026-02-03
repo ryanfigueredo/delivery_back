@@ -550,8 +550,28 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 else if (interactiveId === "opt_2")
                   textForHandler = "atendente";
                 else if (interactiveId === "voltar") textForHandler = "voltar";
-                else if (interactiveId === "upsell_sim") textForHandler = "sim";
-                else if (interactiveId === "upsell_nao") textForHandler = "nao";
+                else if (
+                  interactiveId === "upsell_sim" ||
+                  interactiveId === "adicionar_sim" ||
+                  interactiveId === "bebida_sim"
+                )
+                  textForHandler = "sim";
+                else if (
+                  interactiveId === "upsell_nao" ||
+                  interactiveId === "adicionar_nao" ||
+                  interactiveId === "bebida_nao"
+                )
+                  textForHandler = "nao";
+                else if (
+                  interactiveId === "tipo_delivery" ||
+                  titleLower.includes("delivery")
+                )
+                  textForHandler = "tipo_delivery";
+                else if (
+                  interactiveId === "tipo_retirar" ||
+                  titleLower.includes("retirar")
+                )
+                  textForHandler = "tipo_retirar";
                 else if (
                   interactiveId &&
                   !interactiveId.startsWith("opt_") &&
