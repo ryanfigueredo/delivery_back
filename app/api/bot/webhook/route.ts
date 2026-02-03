@@ -366,14 +366,16 @@ export async function POST(request: NextRequest) {
       process.env.DYNAMODB_AWS_REGION || process.env.AWS_REGION || "us-east-1",
   });
 
-  // PRIORIDADE: responder 200 OK imediatamente para a Meta não retryar
+  // Aguardar processamento completo antes de retornar 200 (garante envio à Meta)
   const entries = (body?.entry as Array<Record<string, unknown>>) || [];
   if (entries.length > 0) {
-    void processWebhookPayload(body).catch((e) => {
+    try {
+      await processWebhookPayload(body);
+    } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
-      console.error("[Webhook] Erro no processamento assíncrono:", err.message);
+      console.error("[Webhook] Erro no processamento:", err.message);
       console.error("[Webhook] Stack:", err.stack);
-    });
+    }
   }
 
   return new NextResponse("OK", {
@@ -525,20 +527,21 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               let textForHandler = messageText;
               const titleLower = (interactiveTitle || "").toLowerCase();
               if (isInteractive) {
+                // Priorizar IDs exatos (ver_cardapio, ver_status, falar_atendente)
                 if (
+                  interactiveId === "ver_cardapio" ||
                   titleLower.includes("cardápio") ||
-                  titleLower.includes("cardapio") ||
-                  interactiveId === "ver_cardapio"
+                  titleLower.includes("cardapio")
                 )
-                  textForHandler = "cardapio";
+                  textForHandler = "ver_cardapio";
                 else if (
-                  titleLower.includes("status") ||
-                  interactiveId === "ver_status"
+                  interactiveId === "ver_status" ||
+                  titleLower.includes("status")
                 )
                   textForHandler = "ver_status";
                 else if (
-                  titleLower.includes("atendente") ||
-                  interactiveId === "falar_atendente"
+                  interactiveId === "falar_atendente" ||
+                  titleLower.includes("atendente")
                 )
                   textForHandler = "falar_atendente";
                 else if (interactiveId === "opt_0") textForHandler = "cardapio";
