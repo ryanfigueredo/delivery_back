@@ -1,62 +1,83 @@
-'use client'
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
-import { DashboardIcon, MenuIcon, StoreIcon, MessageIcon, CrownIcon, BuildingIcon, LogoutIcon, UserIcon } from './Icons'
-import { AppIcon } from './AppIcon'
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import {
+  DashboardIcon,
+  MenuIcon,
+  StoreIcon,
+  MessageIcon,
+  CrownIcon,
+  BuildingIcon,
+  LogoutIcon,
+  UserIcon,
+  DeliveryIcon,
+} from "./Icons";
+import { AppIcon } from "./AppIcon";
 
 interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-  tenant_id?: string | null
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  tenant_id?: string | null;
 }
 
 export function Navigation() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setUser(data.user)
+          setUser(data.user);
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
-      router.refresh()
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
     } catch (error) {
-      console.error('Erro ao fazer logout:', error)
+      console.error("Erro ao fazer logout:", error);
     }
-  }
+  };
 
   // Não mostrar navegação na página de login, suporte, home e vendas
-  if (pathname === '/login' || pathname === '/suporte' || pathname === '/' || pathname === '/vendas' || loading) {
-    return null
+  if (
+    pathname === "/login" ||
+    pathname === "/suporte" ||
+    pathname === "/" ||
+    pathname === "/vendas" ||
+    loading
+  ) {
+    return null;
   }
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-    { href: '/cardapio', label: 'Cardápio', icon: MenuIcon },
-    { href: '/loja', label: 'Controle de Loja', icon: StoreIcon },
-    { href: '/atendimento', label: 'Atendimento', icon: MessageIcon },
-  ]
+    { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
+    { href: "/cardapio", label: "Cardápio", icon: MenuIcon },
+    { href: "/loja", label: "Controle de Loja", icon: StoreIcon },
+    { href: "/dashboard/entregas", label: "Entregas", icon: DeliveryIcon },
+    { href: "/atendimento", label: "Atendimento", icon: MessageIcon },
+  ];
 
   // Adicionar links Admin se for super admin (sem tenant_id)
   if (user && !user.tenant_id) {
-    navItems.push({ href: '/admin', label: 'Master', icon: CrownIcon })
-    navItems.push({ href: '/admin/restaurantes', label: 'Restaurantes', icon: BuildingIcon })
+    navItems.push({ href: "/admin", label: "Master", icon: CrownIcon });
+    navItems.push({
+      href: "/admin/restaurantes",
+      label: "Restaurantes",
+      icon: BuildingIcon,
+    });
   }
 
   return (
@@ -71,33 +92,37 @@ export function Navigation() {
                 Pedidos Express
               </h1>
             </div>
-            
+
             {/* Navigation Items */}
             <div className="hidden md:flex space-x-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                const IconComponent = item.icon
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                const IconComponent = item.icon;
                 return (
                   <a
                     key={item.href}
                     href={item.href}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-primary-50 text-primary-700 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? "bg-primary-50 text-primary-700 shadow-sm"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`}
                   >
-                    <IconComponent 
-                      size={18} 
-                      className={isActive ? 'text-primary-600' : 'text-gray-500'} 
+                    <IconComponent
+                      size={18}
+                      className={
+                        isActive ? "text-primary-600" : "text-gray-500"
+                      }
                     />
                     <span>{item.label}</span>
                   </a>
-                )
+                );
               })}
             </div>
           </div>
-          
+
           {/* User Menu */}
           <div className="flex items-center space-x-4">
             {user && (
@@ -106,9 +131,13 @@ export function Navigation() {
                   <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 rounded-lg">
                     <UserIcon size={16} className="text-gray-500" />
                     <div>
-                      <span className="font-medium text-gray-900">{user.name}</span>
+                      <span className="font-medium text-gray-900">
+                        {user.name}
+                      </span>
                       <span className="text-gray-400 mx-2">•</span>
-                      <span className="text-gray-500 capitalize">{user.role}</span>
+                      <span className="text-gray-500 capitalize">
+                        {user.role}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -123,34 +152,35 @@ export function Navigation() {
             )}
           </div>
         </div>
-        
+
         {/* Mobile Navigation */}
         <div className="md:hidden border-t border-gray-200 py-2">
           <div className="flex space-x-1 overflow-x-auto">
             {navItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              const IconComponent = item.icon
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
+              const IconComponent = item.icon;
               return (
                 <a
                   key={item.href}
                   href={item.href}
                   className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-xs font-medium transition-all min-w-[70px] ${
                     isActive
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-gray-600 hover:bg-gray-50'
+                      ? "bg-primary-50 text-primary-700"
+                      : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  <IconComponent 
-                    size={20} 
-                    className={isActive ? 'text-primary-600' : 'text-gray-500'} 
+                  <IconComponent
+                    size={20}
+                    className={isActive ? "text-primary-600" : "text-gray-500"}
                   />
                   <span className="text-center">{item.label}</span>
                 </a>
-              )
+              );
             })}
           </div>
         </div>
       </div>
     </nav>
-  )
+  );
 }

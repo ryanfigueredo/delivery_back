@@ -403,13 +403,25 @@ export async function POST(request: NextRequest) {
               ...clientConfig,
               phone_number_id: clientConfig.phone_number_id || phoneNumberId,
             };
-            // Para list_reply, o id pode ser o item_id do cardápio (ex: hamburguer_bovino_simples)
-            const textForHandler =
-              isInteractive &&
-              interactiveId &&
-              !interactiveId.startsWith("opt_")
-                ? interactiveId
-                : messageText;
+            // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente; senão usar id ou texto.
+            // Título tem prioridade para evitar confusão Cardápio vs Resumo (ex.: "📋 Cardápio" nunca virar resumo).
+            let textForHandler = messageText;
+            const titleLower = (interactiveTitle || "").toLowerCase();
+            if (isInteractive) {
+              if (
+                titleLower.includes("cardápio") ||
+                titleLower.includes("cardapio")
+              )
+                textForHandler = "cardapio";
+              else if (titleLower.includes("resumo")) textForHandler = "resumo";
+              else if (titleLower.includes("atendente"))
+                textForHandler = "atendente";
+              else if (interactiveId === "opt_0") textForHandler = "cardapio";
+              else if (interactiveId === "opt_1") textForHandler = "resumo";
+              else if (interactiveId === "opt_2") textForHandler = "atendente";
+              else if (interactiveId && !interactiveId.startsWith("opt_"))
+                textForHandler = interactiveId;
+            }
             const result = await handleMessageRestaurante(
               from,
               textForHandler,
