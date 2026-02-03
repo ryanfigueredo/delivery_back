@@ -42,7 +42,11 @@ export interface BotOption {
 export interface WhatsAppClientConfig {
   nome_do_cliente: string;
   token_api_meta: string;
+  phone_number_id?: string;
   tenant_id?: string | null;
+  tenant_slug?: string | null;
+  tenant_api_key?: string | null;
+  desktop_api_url?: string | null;
   welcome_message?: string | null;
   greeting_with_name?: string | null;
   options?: BotOption[];
@@ -89,7 +93,13 @@ export async function getWhatsAppClientConfig(
     return {
       nome_do_cliente: String(item.nome_do_cliente),
       token_api_meta: String(item.token_api_meta),
+      phone_number_id: String(phoneNumberId),
       tenant_id: item.tenant_slug ? String(item.tenant_slug) : null,
+      tenant_slug: item.tenant_slug ? String(item.tenant_slug) : null,
+      tenant_api_key: item.tenant_api_key ? String(item.tenant_api_key) : null,
+      desktop_api_url: item.desktop_api_url
+        ? String(item.desktop_api_url)
+        : "https://pedidos-express-api.vercel.app",
       welcome_message: item.welcome_message
         ? String(item.welcome_message)
         : null,

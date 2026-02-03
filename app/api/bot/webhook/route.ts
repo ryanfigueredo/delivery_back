@@ -1,8 +1,11 @@
 /**
- * Webhook WhatsApp Cloud API — CÓPIA EXATA DO SaaS-RFID
+ * Webhook WhatsApp Cloud API — Tamboril Burguer
  * URL: https://pedidos-express-api.vercel.app/api/bot/webhook
  *
- * Fluxo: welcome (oi) → List Message "Opções" → Cardápio/Resumo/Atendente
+ * Fluxo Restaurante (tenant_api_key presente):
+ *   oi → Cardápio/Resumo/Atendente → menu dinâmico → pedido → Order no banco
+ *
+ * Fluxo simples (fallback): welcome → Lista Cardápio/Resumo/Atendente
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -167,6 +170,49 @@ async function sendListMessage(
     console.error("[Webhook] Erro ao enviar List:", e);
     return false;
   }
+}
+
+/** Envia mensagem interativa (botões ou lista) - usado pelo handlers-restaurante */
+async function sendInteractive(
+  to: string,
+  payload: Record<string, unknown>,
+  phoneNumberId: string,
+  accessToken: string
+): Promise<boolean> {
+  const phone = String(to).replace(/\D/g, "");
+  if (!phone) return false;
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: phone,
+          type: "interactive",
+          interactive: payload,
+        }),
+      }
+    );
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[Webhook] Erro ao enviar interativo:", res.status, err);
+      return false;
+    }
+    console.log("[Webhook] Interativo enviado OK para", phone);
+    return true;
+  } catch (e) {
+    console.error("[Webhook] Erro ao enviar interativo:", e);
+    return false;
+  }
+}
+
+function isRestauranteConfig(config: WhatsAppClientConfig): boolean {
+  return !!(config.tenant_api_key && config.desktop_api_url);
 }
 
 function resolveTextReply(
@@ -347,46 +393,78 @@ export async function POST(request: NextRequest) {
           phoneNumberId
         );
 
+        // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
+        if (isRestauranteConfig(clientConfig)) {
+          try {
+            const {
+              handleMessageRestaurante,
+            } = require("@/lib/whatsapp-bot/handlers-restaurante");
+            const config = {
+              ...clientConfig,
+              phone_number_id: clientConfig.phone_number_id || phoneNumberId,
+            };
+            // Para list_reply, o id pode ser o item_id do cardápio (ex: hamburguer_bovino_simples)
+            const textForHandler =
+              isInteractive &&
+              interactiveId &&
+              !interactiveId.startsWith("opt_")
+                ? interactiveId
+                : messageText;
+            const result = await handleMessageRestaurante(
+              from,
+              textForHandler,
+              config
+            );
+            if (result?.interactive) {
+              await sendInteractive(
+                from,
+                result.interactive as Record<string, unknown>,
+                phoneNumberId,
+                clientConfig.token_api_meta
+              );
+            } else if (result?.reply) {
+              await sendTextMessage(
+                from,
+                result.reply,
+                phoneNumberId,
+                clientConfig.token_api_meta
+              );
+            }
+          } catch (err) {
+            console.error("[Webhook] Erro handlers-restaurante:", err);
+            await sendTextMessage(
+              from,
+              "❌ Ocorreu um erro. Tente novamente em instantes.",
+              phoneNumberId,
+              clientConfig.token_api_meta
+            );
+          }
+          continue;
+        }
+
+        // Fluxo simples (fallback)
         if (isInteractive && interactiveId) {
           const reply = resolveInteractiveReply(
             interactiveId,
             interactiveTitle,
             clientConfig
           );
-          console.log(
-            "[Webhook] Interactive reply para",
-            from,
-            "reply:",
-            reply?.slice(0, 50)
-          );
-          const sentInteractive = await sendTextMessage(
+          await sendTextMessage(
             from,
             reply,
             phoneNumberId,
             clientConfig.token_api_meta
           );
-          console.log(
-            "[Webhook] sendTextMessage (interactive) resultado:",
-            sentInteractive
-          );
           continue;
         }
 
         const { text, sendList } = resolveTextReply(messageText, clientConfig);
-        console.log(
-          "[Webhook] Enviando texto para",
-          from,
-          "sendList:",
-          sendList
-        );
-
-        const sent1 = await sendTextMessage(
+        await sendTextMessage(
           from,
           text,
           phoneNumberId,
           clientConfig.token_api_meta
         );
-        console.log("[Webhook] sendTextMessage resultado:", sent1);
 
         if (sendList && (clientConfig.options || []).length > 0) {
           const listBody =
