@@ -91,12 +91,17 @@ async function sendTextMessage(
         }),
       }
     );
+    const resData = await res.text();
+    console.log(
+      "[Meta API] Resposta sendTextMessage:",
+      res.status,
+      resData?.slice(0, 200) || ""
+    );
     if (!res.ok) {
-      const err = await res.text();
       console.error(
         "[Webhook] Erro ao enviar texto:",
         res.status,
-        err,
+        resData,
         "| to:",
         phone
       );
@@ -157,12 +162,17 @@ async function sendListMessage(
         }),
       }
     );
+    const resData = await res.text();
+    console.log(
+      "[Meta API] Resposta sendListMessage:",
+      res.status,
+      resData?.slice(0, 200) || ""
+    );
     if (!res.ok) {
-      const err = await res.text();
       console.error(
         "[Webhook] Erro ao enviar List Message:",
         res.status,
-        err,
+        resData,
         "| to:",
         phone
       );
@@ -202,9 +212,18 @@ async function sendInteractive(
         }),
       }
     );
+    const resData = await res.text();
+    console.log(
+      "[Meta API] Resposta sendInteractive:",
+      res.status,
+      resData?.slice(0, 200) || ""
+    );
     if (!res.ok) {
-      const err = await res.text();
-      console.error("[Webhook] Erro ao enviar interativo:", res.status, err);
+      console.error(
+        "[Webhook] Erro ao enviar interativo:",
+        res.status,
+        resData
+      );
       return false;
     }
     console.log("[Webhook] Interativo enviado OK para", phone);
@@ -434,7 +453,16 @@ async function processWebhookPayload(body: Record<string, unknown>) {
         );
 
         // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
-        if (isRestauranteConfig(clientConfig)) {
+        const isRestaurante = isRestauranteConfig(clientConfig);
+        console.log(
+          "[Webhook] isRestauranteConfig:",
+          isRestaurante,
+          "| tenant_api_key:",
+          !!clientConfig?.tenant_api_key,
+          "| desktop_api_url:",
+          clientConfig?.desktop_api_url?.slice(0, 50)
+        );
+        if (isRestaurante) {
           try {
             const {
               handleMessageRestaurante,
@@ -474,10 +502,20 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               else if (interactiveId && !interactiveId.startsWith("opt_"))
                 textForHandler = interactiveId;
             }
+            console.log(
+              "[Webhook] Chamando handler | textForHandler:",
+              textForHandler,
+              "| from:",
+              from
+            );
             const result = await handleMessageRestaurante(
               from,
               textForHandler,
               config
+            );
+            console.log(
+              "[Handler] Resultado:",
+              JSON.stringify(result, null, 2)?.slice(0, 500) || result
             );
             if (result?.interactive) {
               await sendInteractive(
