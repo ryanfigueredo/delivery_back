@@ -67,7 +67,7 @@ export default function EntregasPage() {
           ...data.config,
           lastUpdated: data.config?.lastUpdated ?? c.lastUpdated,
         }));
-        alert("✅ Configuração de entregas salva!");
+        alert("Configuração de entregas salva!");
       } else {
         alert(`❌ Erro: ${data.message || "Erro ao salvar"}`);
       }

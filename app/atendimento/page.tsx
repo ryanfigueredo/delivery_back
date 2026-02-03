@@ -1,28 +1,34 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
-import useSWR from 'swr'
+import { useState, useEffect, useRef } from "react";
+import useSWR from "swr";
+import { CheckCircle2 } from "lucide-react";
 
 interface PriorityConversation {
-  phone: string
-  phoneFormatted: string
-  whatsappUrl: string
-  waitTime: number // minutos
-  timestamp: number
-  lastMessage: number
+  phone: string;
+  phoneFormatted: string;
+  whatsappUrl: string;
+  waitTime: number; // minutos
+  timestamp: number;
+  lastMessage: number;
 }
 
 const fetcher = (url: string) =>
   fetch(url)
     .then((res) => res.json())
-    .then((data) => data.conversations || [])
+    .then((data) => data.conversations || []);
 
 export default function AtendimentoPage() {
-  const previousCountRef = useRef<number>(0)
-  const [hasNewConversations, setHasNewConversations] = useState(false)
+  const previousCountRef = useRef<number>(0);
+  const [hasNewConversations, setHasNewConversations] = useState(false);
 
-  const { data: conversations, error, isLoading, mutate } = useSWR<PriorityConversation[]>(
-    '/api/admin/priority-conversations',
+  const {
+    data: conversations,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<PriorityConversation[]>(
+    "/api/admin/priority-conversations",
     fetcher,
     {
       refreshInterval: 10000, // Atualiza a cada 10 segundos (mais frequente)
@@ -30,70 +36,73 @@ export default function AtendimentoPage() {
       revalidateOnReconnect: true,
       dedupingInterval: 5000, // Evita requisições duplicadas
     }
-  )
+  );
 
   // Solicitar permissão de notificação ao carregar a página
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
+    if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch((err) => {
-        console.error('Erro ao solicitar permissão de notificação:', err)
-      })
+        console.error("Erro ao solicitar permissão de notificação:", err);
+      });
     }
-  }, [])
+  }, []);
 
   // Detectar novas conversas e mostrar notificação no navegador
   useEffect(() => {
     if (conversations && conversations.length > 0) {
-      const currentCount = conversations.length
-      const previousCount = previousCountRef.current
+      const currentCount = conversations.length;
+      const previousCount = previousCountRef.current;
 
       // Se apareceu uma nova conversa
       if (currentCount > previousCount && previousCount > 0) {
-        const newCount = currentCount - previousCount
-        setHasNewConversations(true)
+        const newCount = currentCount - previousCount;
+        setHasNewConversations(true);
 
         // Notificação do navegador
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('🔔 Novo Cliente Pediu Atendimento', {
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("🔔 Novo Cliente Pediu Atendimento", {
             body: `${newCount} novo(s) cliente(s) aguardando atendimento`,
-            icon: '/favicon.ico',
-            tag: 'new-conversation',
+            icon: "/favicon.ico",
+            tag: "new-conversation",
             requireInteraction: false,
-          })
-        } else if ('Notification' in window && Notification.permission === 'default') {
+          });
+        } else if (
+          "Notification" in window &&
+          Notification.permission === "default"
+        ) {
           // Solicitar permissão novamente se ainda não foi concedida
           Notification.requestPermission().then((permission) => {
-            if (permission === 'granted' && currentCount > previousCount) {
-              new Notification('🔔 Novo Cliente Pediu Atendimento', {
+            if (permission === "granted" && currentCount > previousCount) {
+              new Notification("🔔 Novo Cliente Pediu Atendimento", {
                 body: `${newCount} novo(s) cliente(s) aguardando atendimento`,
-                icon: '/favicon.ico',
-                tag: 'new-conversation',
-              })
+                icon: "/favicon.ico",
+                tag: "new-conversation",
+              });
             }
-          })
+          });
         }
 
         // Remover o destaque após 5 segundos
-        setTimeout(() => setHasNewConversations(false), 5000)
+        setTimeout(() => setHasNewConversations(false), 5000);
       }
 
-      previousCountRef.current = currentCount
+      previousCountRef.current = currentCount;
     } else if (conversations && conversations.length === 0) {
-      previousCountRef.current = 0
+      previousCountRef.current = 0;
     }
-  }, [conversations])
+  }, [conversations]);
 
   const formatWaitTime = (minutes: number): string => {
-    if (minutes < 1) return 'Agora'
-    if (minutes < 60) return `${minutes} min`
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours}h ${mins}min`
-  }
+    if (minutes < 1) return "Agora";
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}min`;
+  };
 
   const openWhatsApp = (whatsappUrl: string) => {
-    window.open(whatsappUrl, '_blank')
-  }
+    window.open(whatsappUrl, "_blank");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -119,17 +128,23 @@ export default function AtendimentoPage() {
           </div>
         )}
 
-        {!isLoading && !error && conversations && conversations.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <div className="text-4xl mb-4">✅</div>
-            <p className="text-gray-700 text-lg font-semibold mb-2">
-              Nenhuma conversa prioritária no momento
-            </p>
-            <p className="text-gray-500">
-              Clientes que pedirem atendimento aparecerão aqui
-            </p>
-          </div>
-        )}
+        {!isLoading &&
+          !error &&
+          conversations &&
+          conversations.length === 0 && (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <CheckCircle2
+                size={48}
+                className="text-emerald-500 mx-auto mb-4"
+              />
+              <p className="text-gray-700 text-lg font-semibold mb-2">
+                Nenhuma conversa prioritária no momento
+              </p>
+              <p className="text-gray-500">
+                Clientes que pedirem atendimento aparecerão aqui
+              </p>
+            </div>
+          )}
 
         {!isLoading && !error && conversations && conversations.length > 0 && (
           <>
@@ -141,8 +156,8 @@ export default function AtendimentoPage() {
                 <span
                   className={`px-3 py-1 text-white rounded-full text-sm font-semibold transition-all ${
                     hasNewConversations
-                      ? 'bg-primary-500 animate-pulse scale-110'
-                      : 'bg-red-500'
+                      ? "bg-primary-500 animate-pulse scale-110"
+                      : "bg-red-500"
                   }`}
                 >
                   {conversations.length}
@@ -172,8 +187,8 @@ export default function AtendimentoPage() {
                   key={conv.phone || index}
                   className={`bg-white rounded-lg shadow-md p-6 transition-all ${
                     conv.waitTime >= 10
-                      ? 'border-l-4 border-red-500 bg-red-50'
-                      : 'border-l-4 border-blue-500'
+                      ? "border-l-4 border-red-500 bg-red-50"
+                      : "border-l-4 border-blue-500"
                   }`}
                 >
                   <div className="flex justify-between items-start mb-4">
@@ -212,5 +227,5 @@ export default function AtendimentoPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

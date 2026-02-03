@@ -1,5 +1,6 @@
-import Link from 'next/link'
-import { AppIcon } from '@/components/AppIcon'
+import Link from "next/link";
+import { AppIcon } from "@/components/AppIcon";
+import { Check } from "lucide-react";
 
 export default function VendasPage() {
   return (
@@ -11,8 +12,12 @@ export default function VendasPage() {
             <Link href="/" className="flex items-center space-x-3">
               <AppIcon size={40} className="bg-white rounded-lg p-1" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Pedidos Express</h1>
-                <p className="text-sm text-gray-500">Sistema de Delivery Inteligente</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Pedidos Express
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Sistema de Delivery Inteligente
+                </p>
               </div>
             </Link>
             <Link
@@ -49,19 +54,31 @@ export default function VendasPage() {
             </div>
             <ul className="space-y-4 mb-8">
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Bot WhatsApp</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>App Mobile (Android + iOS)</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Dashboard Web</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Suporte por email</span>
               </li>
             </ul>
@@ -76,7 +93,9 @@ export default function VendasPage() {
               MAIS POPULAR
             </div>
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-white mb-2 font-display">Completo</h3>
+              <h3 className="text-2xl font-bold text-white mb-2 font-display">
+                Completo
+              </h3>
               <div className="text-4xl font-bold text-white mb-2 font-display">
                 R$ 497<span className="text-lg text-primary-100">/mês</span>
               </div>
@@ -84,23 +103,23 @@ export default function VendasPage() {
             </div>
             <ul className="space-y-4 mb-8">
               <li className="flex items-start">
-                <span className="text-white mr-2">✅</span>
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
                 <span className="text-white">Tudo do Básico</span>
               </li>
               <li className="flex items-start">
-                <span className="text-white mr-2">✅</span>
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
                 <span className="text-white">Impressão Bluetooth</span>
               </li>
               <li className="flex items-start">
-                <span className="text-white mr-2">✅</span>
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
                 <span className="text-white">Suporte prioritário</span>
               </li>
               <li className="flex items-start">
-                <span className="text-white mr-2">✅</span>
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
                 <span className="text-white">Atualizações automáticas</span>
               </li>
               <li className="flex items-start">
-                <span className="text-white mr-2">✅</span>
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
                 <span className="text-white">Backup automático</span>
               </li>
             </ul>
@@ -120,23 +139,38 @@ export default function VendasPage() {
             </div>
             <ul className="space-y-4 mb-8">
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Tudo do Completo</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Múltiplas lojas</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Relatórios avançados</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Suporte 24/7</span>
               </li>
               <li className="flex items-start">
-                <span className="text-primary-500 mr-2">✅</span>
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
                 <span>Consultoria incluída</span>
               </li>
             </ul>
@@ -146,6 +180,81 @@ export default function VendasPage() {
           </div>
         </div>
 
+        {/* Emissão de NFE */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border-2 border-primary-100">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center font-display">
+            Emissão de Nota Fiscal (NF-e)
+          </h2>
+          <p className="text-gray-600 text-center mb-8 max-w-2xl mx-auto">
+            Quer emitir nota fiscal? Incluímos no seu plano. Escolha a faixa de
+            notas por mês — o valor é acrescido à mensalidade do plano.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full max-w-2xl mx-auto border-collapse">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-3 px-4 font-bold text-gray-900">
+                    Notas Fiscais / mês
+                  </th>
+                  <th className="text-left py-3 px-4 font-bold text-gray-900">
+                    Valor mensal
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-700">
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 500</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 1.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 2.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 3.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 4.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 5.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 10.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 15.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 20.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 25.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+                <tr className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">Até 30.000</td>
+                  <td className="py-3 px-4">Acrescido ao plano</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-sm text-gray-500 text-center mt-4">
+            Valores sob consulta. Entre em contato para incluir emissão de NF-e
+            no seu plano.
+          </p>
+        </div>
+
         {/* Implementação */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
@@ -153,26 +262,43 @@ export default function VendasPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
             <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">O que está incluído:</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                O que está incluído:
+              </h3>
               <ul className="space-y-3">
                 <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">✅</span>
+                  <Check
+                    size={18}
+                    className="text-primary-500 mr-2 flex-shrink-0"
+                  />
                   <span>Configuração completa do bot</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">✅</span>
+                  <Check
+                    size={18}
+                    className="text-primary-500 mr-2 flex-shrink-0"
+                  />
                   <span>Personalização com nome/logo</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">✅</span>
+                  <Check
+                    size={18}
+                    className="text-primary-500 mr-2 flex-shrink-0"
+                  />
                   <span>Integração com sistema</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">✅</span>
+                  <Check
+                    size={18}
+                    className="text-primary-500 mr-2 flex-shrink-0"
+                  />
                   <span>Treinamento da equipe (2h)</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">✅</span>
+                  <Check
+                    size={18}
+                    className="text-primary-500 mr-2 flex-shrink-0"
+                  />
                   <span>Deploy e configuração</span>
                 </li>
               </ul>
@@ -208,9 +334,9 @@ export default function VendasPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="space-y-2 mb-4">
             <p className="text-gray-400">
-              <a 
-                href="https://wa.me/5521997624873" 
-                target="_blank" 
+              <a
+                href="https://wa.me/5521997624873"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-white transition underline"
               >
@@ -219,10 +345,10 @@ export default function VendasPage() {
             </p>
           </div>
           <p className="text-gray-400">
-            &copy; 2026 Pedidos Express. Desenvolvido por{' '}
-            <a 
-              href="https://dmtn.com.br" 
-              target="_blank" 
+            &copy; 2026 Pedidos Express. Desenvolvido por{" "}
+            <a
+              href="https://dmtn.com.br"
+              target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition underline"
             >
@@ -232,5 +358,5 @@ export default function VendasPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
