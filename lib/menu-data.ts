@@ -27,6 +27,7 @@ let MENU_ITEMS: MenuItemData[] = [
   { id: 'suco_limao', name: 'Suco de Limão', price: 6, category: 'bebida', available: true, order: 7 },
   { id: 'suco_abacaxi', name: 'Suco de Abacaxi', price: 6, category: 'bebida', available: true, order: 8 },
   { id: 'agua', name: 'Água', price: 3, category: 'bebida', available: true, order: 9 },
+  { id: 'batata_frita', name: 'Porção de Batata Frita', price: 10, category: 'acompanhamento', available: true, order: 1 },
 ]
 
 /**

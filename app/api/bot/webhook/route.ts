@@ -403,8 +403,9 @@ export async function POST(request: NextRequest) {
               ...clientConfig,
               phone_number_id: clientConfig.phone_number_id || phoneNumberId,
             };
-            // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente; senão usar id ou texto.
-            // Título tem prioridade para evitar confusão Cardápio vs Resumo (ex.: "📋 Cardápio" nunca virar resumo).
+            // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente.
+            // Botões de hambúrguer (id 1,2,3,4 ou título "Bovino Simples", etc): usar TÍTULO
+            // para o handler fazer match por nome e evitar confusão com menu inicial (1=cardápio, 3=atendente).
             let textForHandler = messageText;
             const titleLower = (interactiveTitle || "").toLowerCase();
             if (isInteractive) {
@@ -419,6 +420,17 @@ export async function POST(request: NextRequest) {
               else if (interactiveId === "opt_0") textForHandler = "cardapio";
               else if (interactiveId === "opt_1") textForHandler = "resumo";
               else if (interactiveId === "opt_2") textForHandler = "atendente";
+              else if (interactiveId === "voltar") textForHandler = "voltar";
+              else if (interactiveId === "upsell_sim") textForHandler = "sim";
+              else if (interactiveId === "upsell_nao") textForHandler = "nao";
+              else if (
+                interactiveId &&
+                !interactiveId.startsWith("opt_") &&
+                /^[1-9]\d*$/.test(interactiveId) &&
+                interactiveTitle
+              )
+                // Botão de item (1,2,3,4): passar TÍTULO para o handler (ex: "Bovino Simples")
+                textForHandler = interactiveTitle;
               else if (interactiveId && !interactiveId.startsWith("opt_"))
                 textForHandler = interactiveId;
             }
