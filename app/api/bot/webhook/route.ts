@@ -559,6 +559,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 textForHandler,
                 config
               );
+              console.log("3. Vou disparar para a Meta");
               try {
                 const resStr =
                   result && typeof result === "object"
