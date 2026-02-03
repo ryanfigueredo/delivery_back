@@ -586,6 +586,11 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 else if (interactiveId === "pag_cartao")
                   textForHandler = "pag_cartao";
                 else if (
+                  interactiveId.startsWith("finish|") ||
+                  interactiveId.startsWith("finish")
+                )
+                  textForHandler = interactiveId;
+                else if (
                   interactiveId &&
                   !interactiveId.startsWith("opt_") &&
                   /^[1-9]\d*$/.test(interactiveId) &&
