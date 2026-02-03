@@ -579,6 +579,12 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                   titleLower.includes("retirar")
                 )
                   textForHandler = "tipo_retirar";
+                else if (interactiveId === "pag_dinheiro")
+                  textForHandler = "pag_dinheiro";
+                else if (interactiveId === "pag_pix")
+                  textForHandler = "pag_pix";
+                else if (interactiveId === "pag_cartao")
+                  textForHandler = "pag_cartao";
                 else if (
                   interactiveId &&
                   !interactiveId.startsWith("opt_") &&
