@@ -382,12 +382,20 @@ export async function POST(request: NextRequest) {
   });
 }
 
+function ensureHttpsUrl(url: string): string {
+  const s = (url || "").trim();
+  if (!s) return "https://pedidos-express-api.vercel.app";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `https://${s}`;
+}
+
 function buildFallbackConfig(phoneNumberId: string): WhatsAppClientConfig {
   const token = process.env.TOKEN_API_META || "";
-  const desktopUrl =
+  const rawUrl =
     process.env.DESKTOP_API_URL ||
     process.env.VERCEL_URL ||
-    "https://pedidos-express-api.vercel.app";
+    "pedidos-express-api.vercel.app";
+  const desktopUrl = ensureHttpsUrl(rawUrl);
   return {
     nome_do_cliente: process.env.NOME_DO_CLIENTE || "Tamboril Burguer",
     token_api_meta: token,
