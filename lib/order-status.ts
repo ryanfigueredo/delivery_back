@@ -37,10 +37,17 @@ export async function getOrderStatus(
     const phoneClean = phone.replace(/\D/g, "");
     const phoneSuffix =
       phoneClean.length >= 11 ? phoneClean.slice(-11) : phoneClean;
+    const phoneWithout55 =
+      phoneClean.startsWith("55") && phoneClean.length > 11
+        ? phoneClean.slice(2)
+        : phoneClean;
 
     const orders = await prisma.order.findMany({
       where: {
         OR: [
+          { customer_phone: phoneClean },
+          { customer_phone: phoneSuffix },
+          { customer_phone: phoneWithout55 },
           { customer_phone: { contains: phoneClean } },
           { customer_phone: { contains: phoneSuffix } },
         ],

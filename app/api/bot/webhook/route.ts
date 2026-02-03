@@ -403,6 +403,7 @@ function buildFallbackConfig(phoneNumberId: string): WhatsAppClientConfig {
     token_api_meta: token,
     phone_number_id: phoneNumberId,
     tenant_api_key: process.env.TENANT_API_KEY || "fallback",
+    tenant_slug: process.env.TENANT_SLUG || "tamboril-burguer",
     desktop_api_url: desktopUrl,
     enabled: true,
   };
