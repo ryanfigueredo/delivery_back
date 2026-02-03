@@ -561,7 +561,11 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               );
               console.log(
                 "3. Vou disparar para a Meta",
-                result?.interactive ? "(interactive)" : "(texto)"
+                result?.interactive?.type === "list"
+                  ? "(list)"
+                  : result?.interactive
+                  ? "(interactive)"
+                  : "(texto)"
               );
               try {
                 const resStr =
