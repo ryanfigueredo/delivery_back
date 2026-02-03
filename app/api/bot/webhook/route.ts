@@ -2,6 +2,10 @@
  * Webhook WhatsApp Cloud API — Tamboril Burguer
  * URL: https://pedidos-express-api.vercel.app/api/bot/webhook
  *
+ * PRIORIDADE DE RESPOSTA: Retorna 200 OK IMEDIATAMENTE após receber o body,
+ * para a Meta não retryar (evita mensagens duplicadas). O processamento roda
+ * em background (fire-and-forget).
+ *
  * Fluxo Restaurante (tenant_api_key presente):
  *   oi → Cardápio/Resumo/Atendente → menu dinâmico → pedido → Order no banco
  *
@@ -303,16 +307,52 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log("[Webhook] POST recebido em", new Date().toISOString());
+  const receivedAt = new Date().toISOString();
+  console.log("[Webhook] POST recebido em", receivedAt);
+  console.log("Variável Table Name:", process.env.DYNAMODB_TABLE_NAME);
 
   let body: Record<string, unknown>;
   try {
     body = await request.json();
+    const bodyStr = JSON.stringify(body);
+    console.log(
+      "[Webhook] Body recebido:",
+      bodyStr.length > 2000 ? bodyStr.slice(0, 2000) + "..." : bodyStr
+    );
   } catch (e) {
     console.error("[Webhook] Erro ao parsear body:", e);
     return new NextResponse("OK", { status: 200 });
   }
 
+  const hasAws =
+    !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ||
+    !!(
+      process.env.DYNAMODB_AWS_ACCESS_KEY_ID &&
+      process.env.DYNAMODB_AWS_SECRET_ACCESS_KEY
+    );
+  const tableName = process.env.DYNAMODB_TABLE_NAME || "bot-delivery";
+  console.log("[Webhook] DynamoDB:", {
+    hasCredentials: hasAws,
+    table: tableName,
+    region:
+      process.env.DYNAMODB_AWS_REGION || process.env.AWS_REGION || "us-east-1",
+  });
+
+  // PRIORIDADE: responder 200 OK imediatamente para a Meta não retryar
+  const entries = (body?.entry as Array<Record<string, unknown>>) || [];
+  if (entries.length > 0) {
+    void processWebhookPayload(body).catch((e) =>
+      console.error("[Webhook] Erro no processamento assíncrono:", e)
+    );
+  }
+
+  return new NextResponse("OK", {
+    status: 200,
+    headers: { "Content-Type": "text/plain" },
+  });
+}
+
+async function processWebhookPayload(body: Record<string, unknown>) {
   const entries = (body?.entry as Array<Record<string, unknown>>) || [];
 
   for (const entry of entries) {
@@ -505,9 +545,4 @@ export async function POST(request: NextRequest) {
       }
     }
   }
-
-  return new NextResponse("OK", {
-    status: 200,
-    headers: { "Content-Type": "text/plain" },
-  });
 }
