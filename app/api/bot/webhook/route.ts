@@ -559,7 +559,10 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 textForHandler,
                 config
               );
-              console.log("3. Vou disparar para a Meta");
+              console.log(
+                "3. Vou disparar para a Meta",
+                result?.interactive ? "(interactive)" : "(texto)"
+              );
               try {
                 const resStr =
                   result && typeof result === "object"
