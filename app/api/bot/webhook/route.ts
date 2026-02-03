@@ -513,10 +513,13 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               const {
                 handleMessageRestaurante,
               } = require("@/lib/whatsapp-bot/handlers-restaurante");
+              const { getOrderStatus } = await import("@/lib/order-status");
               const config = {
                 ...clientConfig,
                 phone_number_id:
                   clientConfig.phone_number_id || effectivePhoneId,
+                getOrderStatus: (waId: string) =>
+                  getOrderStatus(waId, clientConfig.tenant_slug ?? undefined),
               };
               // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente.
               let textForHandler = messageText;
@@ -524,13 +527,20 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               if (isInteractive) {
                 if (
                   titleLower.includes("cardápio") ||
-                  titleLower.includes("cardapio")
+                  titleLower.includes("cardapio") ||
+                  interactiveId === "ver_cardapio"
                 )
                   textForHandler = "cardapio";
-                else if (titleLower.includes("resumo"))
-                  textForHandler = "resumo";
-                else if (titleLower.includes("atendente"))
-                  textForHandler = "atendente";
+                else if (
+                  titleLower.includes("status") ||
+                  interactiveId === "ver_status"
+                )
+                  textForHandler = "ver_status";
+                else if (
+                  titleLower.includes("atendente") ||
+                  interactiveId === "falar_atendente"
+                )
+                  textForHandler = "falar_atendente";
                 else if (interactiveId === "opt_0") textForHandler = "cardapio";
                 else if (interactiveId === "opt_1") textForHandler = "resumo";
                 else if (interactiveId === "opt_2")
