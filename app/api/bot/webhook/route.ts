@@ -14,8 +14,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getWhatsAppClientConfig,
-  isWhatsAppDynamoEnabled,
   type WhatsAppClientConfig,
   type BotOption,
 } from "@/lib/whatsapp-dynamodb";
@@ -421,45 +419,24 @@ async function processWebhookPayload(body: Record<string, unknown>) {
         const phoneNumberId =
           phoneNumberIdRaw != null ? String(phoneNumberIdRaw) : undefined;
 
-        if (!phoneNumberId) continue;
+        // Usa phone_number_id do webhook ou forçado via ENV (igual ao CURL que funcionou)
+        const effectivePhoneId =
+          process.env.PHONE_NUMBER_ID || phoneNumberId || "";
+        if (!effectivePhoneId) continue;
 
-        let clientConfig: WhatsAppClientConfig | null = null;
-        try {
-          if (isWhatsAppDynamoEnabled()) {
-            console.log(
-              "[Webhook] Buscando config DynamoDB para phoneNumberId:",
-              phoneNumberId
-            );
-            clientConfig = await getWhatsAppClientConfig(phoneNumberId);
-            console.log(
-              "[Webhook] getWhatsAppClientConfig retornou, config:",
-              !!clientConfig
-            );
-          }
-        } catch (e) {
-          console.error("[Webhook] Erro ao buscar config:", e);
+        const tokenEnv = process.env.TOKEN_API_META;
+        if (!tokenEnv) {
+          console.error(
+            "[Webhook] TOKEN_API_META não definido. Configure na Vercel."
+          );
+          continue;
         }
 
+        // SEM DynamoDB: fallback direto com token e phone ID validados (CURL OK)
         console.log(
-          "[Webhook] Config encontrada:",
-          !!clientConfig,
-          "| phoneNumberId:",
-          phoneNumberId
+          "[Webhook] Forçando Fallback ENV (TOKEN_API_META + PHONE_NUMBER_ID)"
         );
-
-        if (!clientConfig) {
-          const fallbackToken = process.env.TOKEN_API_META;
-          if (fallbackToken) {
-            console.log("[Webhook] Usando fallback de env (TOKEN_API_META)");
-            clientConfig = buildFallbackConfig(phoneNumberId);
-          } else {
-            console.error(
-              "[Webhook] Config não encontrada e sem TOKEN_API_META. phoneNumberId:",
-              phoneNumberId
-            );
-            continue;
-          }
-        }
+        const clientConfig = buildFallbackConfig(effectivePhoneId);
         if (clientConfig.enabled === false) continue;
 
         for (const msg of messages) {
@@ -510,7 +487,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
             "text:",
             messageText?.slice(0, 30),
             "phone_number_id:",
-            phoneNumberId
+            effectivePhoneId
           );
 
           // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
@@ -530,7 +507,8 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               } = require("@/lib/whatsapp-bot/handlers-restaurante");
               const config = {
                 ...clientConfig,
-                phone_number_id: clientConfig.phone_number_id || phoneNumberId,
+                phone_number_id:
+                  clientConfig.phone_number_id || effectivePhoneId,
               };
               // Mapear opt_0/1/2 da lista inicial -> cardapio/resumo/atendente.
               let textForHandler = messageText;
@@ -573,22 +551,27 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 textForHandler,
                 config
               );
-              console.log(
-                "[Handler] Resultado:",
-                JSON.stringify(result, null, 2)?.slice(0, 500) || result
-              );
+              try {
+                const resStr =
+                  result && typeof result === "object"
+                    ? `reply=${!!result.reply} interactive=${!!result.interactive}`
+                    : String(result);
+                console.log("[Handler] Resultado:", resStr);
+              } catch {
+                console.log("[Handler] Resultado: (log ignorado)");
+              }
               if (result?.interactive) {
                 await sendInteractive(
                   from,
                   result.interactive as Record<string, unknown>,
-                  phoneNumberId,
+                  effectivePhoneId,
                   clientConfig.token_api_meta
                 );
               } else if (result?.reply) {
                 await sendTextMessage(
                   from,
                   result.reply,
-                  phoneNumberId,
+                  effectivePhoneId,
                   clientConfig.token_api_meta
                 );
               }
@@ -597,7 +580,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               await sendTextMessage(
                 from,
                 "❌ Ocorreu um erro. Tente novamente em instantes.",
-                phoneNumberId,
+                effectivePhoneId,
                 clientConfig.token_api_meta
               );
             }
@@ -614,7 +597,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
             await sendTextMessage(
               from,
               reply,
-              phoneNumberId,
+              effectivePhoneId,
               clientConfig.token_api_meta
             );
             continue;
@@ -627,7 +610,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
           await sendTextMessage(
             from,
             text,
-            phoneNumberId,
+            effectivePhoneId,
             clientConfig.token_api_meta
           );
 
@@ -639,7 +622,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               listBody,
               "Opções",
               clientConfig.options || [],
-              phoneNumberId,
+              effectivePhoneId,
               clientConfig.token_api_meta
             );
           }
