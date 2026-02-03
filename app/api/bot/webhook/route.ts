@@ -569,18 +569,30 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 console.log("[Handler] Resultado: (log ignorado)");
               }
               if (result?.interactive) {
+                const token = clientConfig.token_api_meta;
+                console.log(
+                  "[Webhook] Enviando interactive via Meta API (token:",
+                  token ? `${token.slice(0, 6)}...${token.slice(-4)}` : "VAZIO",
+                  ")"
+                );
                 await sendInteractive(
                   from,
                   result.interactive as Record<string, unknown>,
                   effectivePhoneId,
-                  clientConfig.token_api_meta
+                  token
                 );
               } else if (result?.reply) {
+                const token = clientConfig.token_api_meta;
+                console.log(
+                  "[Webhook] Enviando texto via Meta API (token:",
+                  token ? `${token.slice(0, 6)}...${token.slice(-4)}` : "VAZIO",
+                  ")"
+                );
                 await sendTextMessage(
                   from,
                   result.reply,
                   effectivePhoneId,
-                  clientConfig.token_api_meta
+                  token
                 );
               }
             } catch (err) {
