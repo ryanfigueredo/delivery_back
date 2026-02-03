@@ -1,6 +1,6 @@
 /**
  * Webhook WhatsApp Cloud API — Tamboril Burguer
- * URL: https://pedidos-express-api.vercel.app/api/bot/webhook
+ * URL: https://pedidos.dmtn.com.br/api/bot/webhook
  *
  * PRIORIDADE DE RESPOSTA: Retorna 200 OK IMEDIATAMENTE após receber o body,
  * para a Meta não retryar (evita mensagens duplicadas). O processamento roda
@@ -384,7 +384,7 @@ export async function POST(request: NextRequest) {
 
 function ensureHttpsUrl(url: string): string {
   const s = (url || "").trim();
-  if (!s) return "https://pedidos-express-api.vercel.app";
+  if (!s) return "https://pedidos.dmtn.com.br";
   if (s.startsWith("http://") || s.startsWith("https://")) return s;
   return `https://${s}`;
 }
@@ -394,7 +394,7 @@ function buildFallbackConfig(phoneNumberId: string): WhatsAppClientConfig {
   const rawUrl =
     process.env.DESKTOP_API_URL ||
     process.env.VERCEL_URL ||
-    "pedidos-express-api.vercel.app";
+    "pedidos.dmtn.com.br";
   const desktopUrl = ensureHttpsUrl(rawUrl);
   return {
     nome_do_cliente: process.env.NOME_DO_CLIENTE || "Tamboril Burguer",

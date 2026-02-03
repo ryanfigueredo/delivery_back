@@ -99,7 +99,7 @@ export async function getWhatsAppClientConfig(
       tenant_api_key: item.tenant_api_key ? String(item.tenant_api_key) : null,
       desktop_api_url: item.desktop_api_url
         ? String(item.desktop_api_url)
-        : "https://pedidos-express-api.vercel.app",
+        : "https://pedidos.dmtn.com.br",
       welcome_message: item.welcome_message
         ? String(item.welcome_message)
         : null,
