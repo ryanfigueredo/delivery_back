@@ -75,6 +75,7 @@ async function sendTextMessage(
   const phone = String(to).replace(/\D/g, "");
   if (!phone) return false;
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
+  console.log("[Meta API] Número destino (wa_id, só dígitos):", phone, "| len:", phone.length);
   const tokenPreview = accessToken
     ? `${accessToken.slice(0, 4)}...${accessToken.slice(-4)}`
     : "(vazio)";
@@ -365,9 +366,11 @@ export async function POST(request: NextRequest) {
   // PRIORIDADE: responder 200 OK imediatamente para a Meta não retryar
   const entries = (body?.entry as Array<Record<string, unknown>>) || [];
   if (entries.length > 0) {
-    void processWebhookPayload(body).catch((e) =>
-      console.error("[Webhook] Erro no processamento assíncrono:", e)
-    );
+    void processWebhookPayload(body).catch((e) => {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.error("[Webhook] Erro no processamento assíncrono:", err.message);
+      console.error("[Webhook] Stack:", err.stack);
+    });
   }
 
   return new NextResponse("OK", {
@@ -376,10 +379,28 @@ export async function POST(request: NextRequest) {
   });
 }
 
-async function processWebhookPayload(body: Record<string, unknown>) {
-  const entries = (body?.entry as Array<Record<string, unknown>>) || [];
+function buildFallbackConfig(phoneNumberId: string): WhatsAppClientConfig {
+  const token = process.env.TOKEN_API_META || "";
+  const desktopUrl =
+    process.env.DESKTOP_API_URL ||
+    process.env.VERCEL_URL ||
+    "https://pedidos-express-api.vercel.app";
+  return {
+    nome_do_cliente: process.env.NOME_DO_CLIENTE || "Tamboril Burguer",
+    token_api_meta: token,
+    phone_number_id: phoneNumberId,
+    tenant_api_key: process.env.TENANT_API_KEY || "fallback",
+    desktop_api_url: desktopUrl,
+    enabled: true,
+  };
+}
 
-  for (const entry of entries) {
+async function processWebhookPayload(body: Record<string, unknown>) {
+  console.log("[Webhook] processWebhookPayload iniciado, entries:", (body?.entry as unknown[])?.length ?? 0);
+  try {
+    const entries = (body?.entry as Array<Record<string, unknown>>) || [];
+
+    for (const entry of entries) {
     const entryChanges =
       (entry?.changes as Array<Record<string, unknown>>) || [];
 
@@ -396,16 +417,25 @@ async function processWebhookPayload(body: Record<string, unknown>) {
       let clientConfig: WhatsAppClientConfig | null = null;
       try {
         if (isWhatsAppDynamoEnabled()) {
+          console.log("[Webhook] Buscando config DynamoDB para phoneNumberId:", phoneNumberId);
           clientConfig = await getWhatsAppClientConfig(phoneNumberId);
+          console.log("[Webhook] getWhatsAppClientConfig retornou, config:", !!clientConfig);
         }
       } catch (e) {
         console.error("[Webhook] Erro ao buscar config:", e);
-        continue;
       }
 
+      console.log("[Webhook] Config encontrada:", !!clientConfig, "| phoneNumberId:", phoneNumberId);
+
       if (!clientConfig) {
-        console.error("[Webhook] Config não encontrada para", phoneNumberId);
-        continue;
+        const fallbackToken = process.env.TOKEN_API_META;
+        if (fallbackToken) {
+          console.log("[Webhook] Usando fallback de env (TOKEN_API_META)");
+          clientConfig = buildFallbackConfig(phoneNumberId);
+        } else {
+          console.error("[Webhook] Config não encontrada e sem TOKEN_API_META. phoneNumberId:", phoneNumberId);
+          continue;
+        }
       }
       if (clientConfig.enabled === false) continue;
 
@@ -587,5 +617,10 @@ async function processWebhookPayload(body: Record<string, unknown>) {
         }
       }
     }
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("[Webhook] processWebhookPayload ERRO:", error.message);
+    console.error("[Webhook] Stack:", error.stack);
+    throw err;
   }
 }
