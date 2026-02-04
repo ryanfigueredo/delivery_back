@@ -594,6 +594,9 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                 else if (interactiveId === "pag_cartao")
                   textForHandler = "pag_cartao";
                 else if (
+                  interactiveId.startsWith("addmore|") ||
+                  interactiveId.startsWith("add_") ||
+                  interactiveId.startsWith("qtyadd_") ||
                   interactiveId.startsWith("local|") ||
                   interactiveId.startsWith("emcasa|") ||
                   interactiveId.startsWith("restaurante|") ||
