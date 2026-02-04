@@ -204,6 +204,14 @@ async function sendInteractive(
 ): Promise<boolean> {
   const phone = String(to).replace(/\D/g, "");
   if (!phone) return false;
+  const sections = (payload?.action as { sections?: { rows?: unknown[] }[] })
+    ?.sections;
+  const totalItems = Array.isArray(sections)
+    ? sections.reduce((n, s) => n + (s?.rows?.length ?? 0), 0)
+    : 0;
+  if (totalItems > 0) {
+    console.log("Enviando lista com " + totalItems + " itens");
+  }
   try {
     const res = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`,
