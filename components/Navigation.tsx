@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Menu,
   X,
+  Printer,
 } from "lucide-react";
 import { AppIcon } from "./AppIcon";
 
@@ -120,6 +121,7 @@ export function Navigation() {
     { href: "/loja", label: "Loja", icon: Store },
     { href: "/dashboard/entregas", label: "Entregas", icon: Truck },
     { href: "/atendimento", label: "Atendimento", icon: MessageCircle },
+    { href: "/logsimpressora", label: "Logs Impressora", icon: Printer },
   ];
 
   if (user && !user.tenant_id) {
