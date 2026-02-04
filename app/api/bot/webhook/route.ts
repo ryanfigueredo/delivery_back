@@ -401,10 +401,8 @@ function ensureHttpsUrl(url: string): string {
 
 function buildFallbackConfig(phoneNumberId: string): WhatsAppClientConfig {
   const token = process.env.TOKEN_API_META || "";
-  const rawUrl =
-    process.env.DESKTOP_API_URL ||
-    process.env.VERCEL_URL ||
-    "pedidos.dmtn.com.br";
+  // DESKTOP_API_URL deve ser a URL de produção do app de pedidos (evita 401 em previews)
+  const rawUrl = process.env.DESKTOP_API_URL || "pedidos.dmtn.com.br";
   const desktopUrl = ensureHttpsUrl(rawUrl);
   return {
     nome_do_cliente: process.env.NOME_DO_CLIENTE || "Tamboril Burguer",
@@ -451,11 +449,23 @@ async function processWebhookPayload(body: Record<string, unknown>) {
           continue;
         }
 
-        // SEM DynamoDB: fallback direto com token e phone ID validados (CURL OK)
-        console.log(
-          "[Webhook] Forçando Fallback ENV (TOKEN_API_META + PHONE_NUMBER_ID)"
-        );
-        const clientConfig = buildFallbackConfig(effectivePhoneId);
+        // Buscar config no DynamoDB primeiro; fallback ENV só se falhar
+        let clientConfig: WhatsAppClientConfig | null = null;
+        try {
+          const { getWhatsAppClientConfig } = await import(
+            "@/lib/whatsapp-dynamodb"
+          );
+          clientConfig = await getWhatsAppClientConfig(effectivePhoneId);
+        } catch (e) {
+          console.warn("[Webhook] DynamoDB config falhou, usando fallback");
+        }
+        if (!clientConfig?.token_api_meta) {
+          clientConfig = buildFallbackConfig(effectivePhoneId);
+          console.log("[Webhook] Usando config fallback (ENV)");
+        }
+        clientConfig.token_api_meta = tokenEnv;
+        clientConfig.phone_number_id =
+          clientConfig.phone_number_id || effectivePhoneId;
         if (clientConfig.enabled === false) continue;
 
         for (const msg of messages) {
@@ -511,14 +521,6 @@ async function processWebhookPayload(body: Record<string, unknown>) {
 
           // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
           const isRestaurante = isRestauranteConfig(clientConfig);
-          console.log(
-            "[Webhook] isRestauranteConfig:",
-            isRestaurante,
-            "| tenant_api_key:",
-            !!clientConfig?.tenant_api_key,
-            "| desktop_api_url:",
-            clientConfig?.desktop_api_url?.slice(0, 50)
-          );
           if (isRestaurante) {
             try {
               const {
