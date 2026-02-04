@@ -13,6 +13,7 @@ import {
   LogOut,
   User,
   ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import { AppIcon } from "./AppIcon";
 
@@ -85,6 +86,7 @@ export function Navigation() {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard/stream", label: "Pedidos", icon: ClipboardList },
     { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
     { href: "/loja", label: "Loja", icon: Store },
     { href: "/dashboard/entregas", label: "Entregas", icon: Truck },

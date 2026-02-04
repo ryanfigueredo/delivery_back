@@ -1,69 +1,71 @@
-'use client'
+"use client";
 
 interface OrderItem {
-  id: string
-  name: string
-  quantity: number
-  price: number
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
 }
 
 interface Order {
-  id: string
-  customer_name: string
-  customer_phone: string
-  items: OrderItem[]
-  total_price: number | string
-  status: 'pending' | 'printed' | 'finished'
-  created_at: string
-  order_number?: number
-  daily_sequence?: number
-  display_id?: string
-  customer_total_orders?: number
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  items: OrderItem[];
+  total_price: number | string;
+  status: "pending" | "printed" | "finished";
+  created_at: string;
+  order_number?: number;
+  daily_sequence?: number;
+  display_id?: string;
+  customer_total_orders?: number;
 }
 
 interface OrderCardProps {
-  order: Order
-  onReprint: (orderId: string) => void
+  order: Order;
+  onReprint: (orderId: string) => void;
+  onPrint?: (orderId: string) => void;
 }
 
-export function OrderCard({ order, onReprint }: OrderCardProps) {
-  const isPending = order.status === 'pending'
-  const isPrinted = order.status === 'printed'
+export function OrderCard({ order, onReprint, onPrint }: OrderCardProps) {
+  const isPending = order.status === "pending";
+  const isPrinted = order.status === "printed";
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date)
-  }
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
 
   const formatPrice = (price: number | string) => {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(numPrice)
-  }
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(numPrice);
+  };
 
   return (
     <div
       className={`card-modern p-6 transition-all duration-300 hover:scale-[1.02] ${
         isPending
-          ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 shadow-yellow-100'
+          ? "bg-gradient-to-br from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 shadow-yellow-100"
           : isPrinted
-          ? 'bg-gradient-to-br from-primary-50 to-primary-100 border-l-4 border-primary-500 shadow-primary-100'
-          : 'bg-white border-l-4 border-gray-300'
+          ? "bg-gradient-to-br from-primary-50 to-primary-100 border-l-4 border-primary-500 shadow-primary-100"
+          : "bg-white border-l-4 border-gray-300"
       }`}
     >
       <div className="flex justify-between items-start mb-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-xl font-bold text-gray-900">
-              {order.display_id || `Pedido #${order.daily_sequence || order.id.slice(0, 8)}`}
+              {order.display_id ||
+                `Pedido #${order.daily_sequence || order.id.slice(0, 8)}`}
             </h2>
             {order.daily_sequence && (
               <span className="badge badge-info">
@@ -73,34 +75,46 @@ export function OrderCard({ order, onReprint }: OrderCardProps) {
             <span
               className={`badge ${
                 isPending
-                  ? 'badge-warning'
+                  ? "badge-warning"
                   : isPrinted
-                  ? 'badge-success'
-                  : 'bg-gray-200 text-gray-700'
+                  ? "badge-success"
+                  : "bg-gray-200 text-gray-700"
               }`}
             >
-              {isPending ? 'Pendente' : isPrinted ? 'Impresso' : 'Finalizado'}
+              {isPending ? "Pendente" : isPrinted ? "Impresso" : "Finalizado"}
             </span>
           </div>
           <p className="text-sm text-gray-600">
             {formatDate(order.created_at)}
           </p>
         </div>
-        {isPrinted && (
-          <button
-            onClick={() => onReprint(order.id)}
-            className="btn-primary text-sm px-4 py-2"
-          >
-            Reimprimir
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isPending && onPrint && (
+            <button
+              onClick={() => onPrint(order.id)}
+              className="btn-primary text-sm px-4 py-2"
+            >
+              Imprimir
+            </button>
+          )}
+          {isPrinted && (
+            <button
+              onClick={() => onReprint(order.id)}
+              className="btn-primary text-sm px-4 py-2"
+            >
+              Reimprimir
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-4 bg-white/50 rounded-lg p-3">
         <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
           Cliente
         </h3>
-        <p className="text-gray-900 font-semibold text-lg">{order.customer_name}</p>
+        <p className="text-gray-900 font-semibold text-lg">
+          {order.customer_name}
+        </p>
         <p className="text-sm text-gray-600 mt-1">{order.customer_phone}</p>
         {order.customer_total_orders && order.customer_total_orders > 0 && (
           <p className="text-xs text-primary-600 mt-2 font-medium">
@@ -144,5 +158,5 @@ export function OrderCard({ order, onReprint }: OrderCardProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

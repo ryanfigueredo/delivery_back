@@ -1,82 +1,92 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { OrderCard } from '@/components/OrderCard'
-import { getSession } from '@/lib/auth-session'
+import { useEffect, useState } from "react";
+import { OrderCard } from "@/components/OrderCard";
+import { getSession } from "@/lib/auth-session";
 
 interface Order {
-  id: string
-  customer_name: string
-  customer_phone: string
+  id: string;
+  customer_name: string;
+  customer_phone: string;
   items: Array<{
-    id: string
-    name: string
-    quantity: number
-    price: number
-  }>
-  total_price: number | string
-  status: 'pending' | 'printed' | 'finished'
-  created_at: string
-  order_number?: number
-  daily_sequence?: number
-  display_id?: string
-  customer_total_orders?: number
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  total_price: number | string;
+  status: "pending" | "printed" | "finished";
+  created_at: string;
+  order_number?: number;
+  daily_sequence?: number;
+  display_id?: string;
+  customer_total_orders?: number;
 }
 
 export default function DashboardStreamPage() {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Usar Server-Sent Events para atualização em tempo real
-    const eventSource = new EventSource('/api/orders/stream')
+    const eventSource = new EventSource("/api/orders/stream");
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
-        
-        if (data.type === 'initial' || data.type === 'update') {
-          setOrders(data.orders || [])
-          setIsLoading(false)
-          setError(null)
-        } else if (data.type === 'error') {
-          setError(data.message)
-          setIsLoading(false)
+        const data = JSON.parse(event.data);
+
+        if (data.type === "initial" || data.type === "update") {
+          setOrders(data.orders || []);
+          setIsLoading(false);
+          setError(null);
+        } else if (data.type === "error") {
+          setError(data.message);
+          setIsLoading(false);
         }
       } catch (err) {
-        console.error('Erro ao processar SSE:', err)
+        console.error("Erro ao processar SSE:", err);
       }
-    }
+    };
 
     eventSource.onerror = (err) => {
-      console.error('Erro no SSE:', err)
-      eventSource.close()
+      console.error("Erro no SSE:", err);
+      eventSource.close();
       // Fallback para polling se SSE falhar
-      setIsLoading(false)
-      setError('Conexão perdida. Recarregue a página.')
-    }
+      setIsLoading(false);
+      setError("Conexão perdida. Recarregue a página.");
+    };
 
     return () => {
-      eventSource.close()
-    }
-  }, [])
+      eventSource.close();
+    };
+  }, []);
 
   const handleReprint = async (orderId: string) => {
     try {
       const response = await fetch(`/api/orders/${orderId}/reprint`, {
-        method: 'PATCH',
-      })
+        method: "PATCH",
+      });
+      if (!response.ok) console.error("Erro ao reimprimir pedido");
+    } catch (error) {
+      console.error("Erro ao reimprimir pedido:", error);
+    }
+  };
 
+  const handlePrint = async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/request-print`, {
+        method: "PATCH",
+      });
       if (response.ok) {
-        // SSE vai atualizar automaticamente
+        // App-admin vai pegar e imprimir na próxima atualização
       } else {
-        console.error('Erro ao reimprimir pedido')
+        console.error("Erro ao solicitar impressão");
       }
     } catch (error) {
-      console.error('Erro ao reimprimir pedido:', error)
+      console.error("Erro ao solicitar impressão:", error);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -104,9 +114,7 @@ export default function DashboardStreamPage() {
 
         {!isLoading && !error && orders && orders.length === 0 && (
           <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500 text-lg">
-              Nenhum pedido encontrado
-            </p>
+            <p className="text-gray-500 text-lg">Nenhum pedido encontrado</p>
           </div>
         )}
 
@@ -117,11 +125,12 @@ export default function DashboardStreamPage() {
                 key={order.id}
                 order={order}
                 onReprint={handleReprint}
+                onPrint={handlePrint}
               />
             ))}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

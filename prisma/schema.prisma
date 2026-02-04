@@ -52,6 +52,7 @@ model Order {
   order_type    String?     // Tipo de pedido: 'restaurante' ou 'delivery'
   estimated_time Int?       // Tempo estimado em minutos
   delivery_address String?  // Endereço de entrega (apenas para delivery)
+  print_requested_at DateTime? // Quando o dashboard web solicitou impressão (app-admin imprime e limpa)
 
   // Relação
   tenant        Tenant      @relation(fields: [tenant_id], references: [id], onDelete: Cascade)

@@ -52,20 +52,40 @@ export async function getOrderStatus(
           { customer_phone: { contains: phoneSuffix } },
         ],
         ...(tenantId && { tenant_id: tenantId }),
-        status: { in: ["pending", "printed", "out_for_delivery"] },
       },
       orderBy: { created_at: "desc" },
-      take: 1,
+      take: 3,
     });
 
-    const order = orders[0];
-    if (!order) return "Você não possui pedidos ativos no momento.";
+    if (orders.length === 0)
+      return "Você ainda não possui pedidos. Faça um pedido pelo cardápio!";
 
-    const statusLabel =
-      STATUS_MAP[order.status] || order.status || "Em processamento";
-    const displayId =
-      order.display_id || `#${order.order_number || order.id.slice(0, 8)}`;
-    return `📦 *Status do Pedido ${displayId}*\n\n${statusLabel}\n\nEm caso de dúvidas, fale com um atendente.`;
+    const lines: string[] = ["📦 *Seus pedidos recentes:*\n"];
+    for (const order of orders) {
+      const statusLabel =
+        STATUS_MAP[order.status] || order.status || "Em processamento";
+      const displayId =
+        order.display_id ||
+        `#${String(order.order_number || order.id.slice(0, 8))}`;
+      const items =
+        (order.items as Array<{ name?: string; quantity?: number }>) || [];
+      const itemsStr = items
+        .slice(0, 5)
+        .map((i) => `${i.quantity || 1}x ${i.name || "Item"}`)
+        .join(", ");
+      const total = Number(order.total_price) || 0;
+      const addr =
+        order.order_type === "delivery" && order.delivery_address
+          ? `\n📍 ${order.delivery_address}`
+          : "";
+      lines.push(
+        `${displayId} • ${statusLabel}\n` +
+          `${itemsStr || "Pedido"}\n` +
+          `💰 R$ ${total.toFixed(2).replace(".", ",")}${addr}\n`
+      );
+    }
+    lines.push("\nEm caso de dúvidas, fale com um atendente.");
+    return lines.join("\n");
   } catch (e) {
     console.error("[OrderStatus] Erro:", e);
     return fallback;
