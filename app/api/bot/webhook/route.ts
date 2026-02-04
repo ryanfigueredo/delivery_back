@@ -597,7 +597,6 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                   interactiveId.startsWith("addmore|") ||
                   interactiveId.startsWith("add_") ||
                   interactiveId.startsWith("qtyadd_") ||
-                  interactiveId.startsWith("addr_") ||
                   interactiveId.startsWith("local|") ||
                   interactiveId.startsWith("emcasa|") ||
                   interactiveId.startsWith("restaurante|") ||
