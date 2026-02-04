@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { level, message, details, deviceId, orderId } = body;
 
+    // Aceitar logs sem autenticação (vindos do app mobile)
+    // Ou verificar API Key se presente
+    const apiKey = request.headers.get("X-API-Key");
+    const tenantId = request.headers.get("X-Tenant-Id");
+
     const logEntry = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
@@ -37,6 +42,11 @@ export async function POST(request: NextRequest) {
     if (logs.length > MAX_LOGS) {
       logs.shift();
     }
+
+    console.log(
+      `[PrinterLog] ${level.toUpperCase()}: ${message}`,
+      details || ""
+    );
 
     return NextResponse.json({ success: true, id: logEntry.id });
   } catch (error: any) {
