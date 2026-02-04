@@ -5,14 +5,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --color-primary: #22c55e; /* Verde restaurante */
-  --color-primary-dark: #16a34a;
-  --color-primary-light: #4ade80;
-  --color-accent: #f59e0b; /* Laranja/dourado */
+  --color-primary: #ea580c; /* Laranja Pedidos Express - sensação de comida */
+  --color-primary-dark: #c2410c;
+  --color-primary-light: #f97316;
+  --color-accent: #ea580c;
   --color-text: #1f2937;
   --color-text-light: #6b7280;
   --color-bg: #ffffff;
-  --color-bg-light: #f9fafb;
+  --color-bg-light: #fff7ed;
 }
 
 * {
@@ -26,7 +26,7 @@ h1, h2, h3, h4, h5, h6 {
 
 body {
   color: var(--color-text);
-  background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
+  background: linear-gradient(to bottom, #fff7ed 0%, #ffffff 100%);
   min-height: 100vh;
 }
 

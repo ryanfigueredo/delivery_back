@@ -9,9 +9,18 @@ interface StoreStatus {
   lastUpdated: string;
 }
 
+interface TenantProfile {
+  name: string;
+  logo_url: string | null;
+}
+
 export default function LojaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingName, setSavingName] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
+  const [storeName, setStoreName] = useState("");
   const [status, setStatus] = useState<StoreStatus>({
     isOpen: true,
     nextOpenTime: null,
@@ -23,7 +32,21 @@ export default function LojaPage() {
 
   useEffect(() => {
     loadStoreStatus();
+    loadTenantProfile();
   }, []);
+
+  const loadTenantProfile = async () => {
+    try {
+      const res = await fetch("/api/admin/tenant-profile");
+      const data = await res.json();
+      if (data.success && data.profile) {
+        setTenantProfile(data.profile);
+        setStoreName(data.profile.name || "");
+      }
+    } catch {
+      //
+    }
+  };
 
   const loadStoreStatus = async () => {
     try {
@@ -76,6 +99,63 @@ export default function LojaPage() {
     }
   };
 
+  const handleSaveStoreName = async () => {
+    if (!storeName.trim()) return;
+    try {
+      setSavingName(true);
+      const res = await fetch("/api/admin/tenant-profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: storeName.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTenantProfile((p) => (p ? { ...p, name: storeName.trim() } : null));
+        alert("Nome da loja atualizado! O bot usará esse nome nas mensagens do WhatsApp.");
+      } else {
+        alert(`Erro: ${data.error || "Erro ao salvar"}`);
+      }
+    } catch {
+      alert("Erro ao salvar nome");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Escolha uma imagem (JPEG, PNG ou WebP)");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Arquivo muito grande (máx 2MB)");
+      return;
+    }
+    try {
+      setUploadingLogo(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.logo_url) {
+        setTenantProfile((p) => (p ? { ...p, logo_url: data.logo_url } : null));
+        alert("Logo enviada para a nuvem (AWS S3)!");
+      } else {
+        alert(data.error || "Erro ao enviar logo");
+      }
+    } catch {
+      alert("Erro ao enviar logo");
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -96,8 +176,69 @@ export default function LojaPage() {
             Controle de Loja
           </h1>
           <p className="text-gray-600 text-lg">
-            Gerencie o status e horários da sua loja
+            Nome da loja, logo, status e horários
           </p>
+        </div>
+
+        {/* Nome da Loja - atualiza no bot WhatsApp */}
+        <div className="card-modern p-6 mb-6 animate-fade-in">
+          <h2 className="text-xl font-bold text-gray-900 font-display mb-2">
+            Nome da Loja
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Esse nome aparece nas mensagens do WhatsApp quando o cliente fala com o bot.
+          </p>
+          <div className="flex gap-4 items-end">
+            <input
+              type="text"
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              placeholder="Ex: Tamboril Burguer"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            />
+            <button
+              onClick={handleSaveStoreName}
+              disabled={savingName || !storeName.trim()}
+              className="btn-primary disabled:opacity-50"
+            >
+              {savingName ? "Salvando..." : "Salvar Nome"}
+            </button>
+          </div>
+        </div>
+
+        {/* Logo da Loja - upload AWS S3 */}
+        <div className="card-modern p-6 mb-6 animate-fade-in">
+          <h2 className="text-xl font-bold text-gray-900 font-display mb-2">
+            Logo da Loja
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            A logo identifica sua loja no app e no desktop. Será enviada para a nuvem (AWS S3).
+          </p>
+          <div className="flex items-center gap-6">
+            {tenantProfile?.logo_url ? (
+              <img
+                src={tenantProfile.logo_url}
+                alt="Logo"
+                className="h-24 w-24 rounded-xl object-cover border border-gray-200"
+              />
+            ) : (
+              <div className="h-24 w-24 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">
+                Sem logo
+              </div>
+            )}
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleLogoUpload}
+                disabled={uploadingLogo}
+                className="hidden"
+              />
+              <span className="btn-secondary inline-block">
+                {uploadingLogo ? "Enviando..." : "Escolher imagem"}
+              </span>
+            </label>
+          </div>
         </div>
 
         {/* Status da Loja */}

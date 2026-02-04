@@ -24,6 +24,7 @@ model Tenant {
   slug        String   @unique // Identificador único (ex: "tamboril-burguer")
   api_key     String   @unique // API key única para cada tenant
   whatsapp_phone String? // Telefone do WhatsApp do bot
+  logo_url    String?  // URL da logo no S3
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt

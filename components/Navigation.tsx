@@ -25,12 +25,18 @@ interface UserData {
   tenant_id?: string | null;
 }
 
+interface TenantProfile {
+  name: string;
+  logo_url: string | null;
+}
+
 const iconSize = 18;
 
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
+  const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -45,6 +51,17 @@ export function Navigation() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/tenant-profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.profile) {
+          setTenantProfile(data.profile);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -106,8 +123,17 @@ export function Navigation() {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
+          {/* Logo do tenant acima/esquerda, header mantém Pedidos Express */}
           <a href="/dashboard" className="flex items-center gap-3">
-            <AppIcon size={28} />
+            {tenantProfile?.logo_url ? (
+              <img
+                src={tenantProfile.logo_url}
+                alt={tenantProfile.name}
+                className="h-9 w-9 rounded-lg object-cover"
+              />
+            ) : (
+              <AppIcon size={28} />
+            )}
             <span className="text-lg font-bold text-gray-900 font-display">
               Pedidos Express
             </span>

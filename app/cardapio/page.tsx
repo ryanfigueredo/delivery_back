@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Trash2, Pencil } from "lucide-react";
 
 interface MenuItem {
   id: string;
@@ -22,9 +23,10 @@ export default function CardapioPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showStats, setShowStats] = useState(false);
   const [stats, setStats] = useState<ItemStats[]>([]);
-  const [loadingStats, setLoadingStats] = useState(false);
+  const [filter, setFilter] = useState<
+    "padrao" | "maisVendidos" | "nome" | "precoMenor" | "precoMaior"
+  >("padrao");
   const [deletingItem, setDeletingItem] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -40,7 +42,18 @@ export default function CardapioPage() {
 
   useEffect(() => {
     loadMenu();
+    loadStats();
   }, []);
+
+  const loadStats = async () => {
+    try {
+      const res = await fetch("/api/admin/menu/stats");
+      const data = await res.json();
+      if (data.success) setStats(data.stats || []);
+    } catch {
+      //
+    }
+  };
 
   const loadMenu = async () => {
     try {
@@ -243,20 +256,8 @@ export default function CardapioPage() {
     }
   };
 
-  const loadStats = async () => {
-    try {
-      setLoadingStats(true);
-      const res = await fetch("/api/admin/menu/stats");
-      const data = await res.json();
-      if (data.success) {
-        setStats(data.stats || []);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar estatísticas:", error);
-    } finally {
-      setLoadingStats(false);
-    }
-  };
+  const statsMap = Object.fromEntries(stats.map((s) => [s.name, s]));
+  const getItemCount = (name: string) => statsMap[name]?.quantity ?? 0;
 
   const categories = ["hamburguer", "bebida", "acompanhamento", "sobremesa"];
   const categoryLabels: Record<string, string> = {
@@ -266,11 +267,27 @@ export default function CardapioPage() {
     sobremesa: "Sobremesas",
   };
 
+  const sortItems = (items: MenuItem[]) => {
+    const sorted = [...items];
+    switch (filter) {
+      case "maisVendidos":
+        return sorted.sort(
+          (a, b) => getItemCount(b.name) - getItemCount(a.name)
+        );
+      case "nome":
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case "precoMenor":
+        return sorted.sort((a, b) => a.price - b.price);
+      case "precoMaior":
+        return sorted.sort((a, b) => b.price - a.price);
+      default:
+        return sorted.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  };
+
   const groupedItems = categories.reduce((acc, category) => {
-    const items = menuItems
-      .filter((item) => item.category === category)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-    acc[category] = items;
+    const items = menuItems.filter((item) => item.category === category);
+    acc[category] = sortItems(items);
     return acc;
   }, {} as Record<string, MenuItem[]>);
 
@@ -284,21 +301,31 @@ export default function CardapioPage() {
               Cardápio
             </h1>
             <p className="text-gray-600 text-lg">
-              Gerencie os itens do seu cardápio
+              Mesmo cardápio exibido no bot (por categoria: Lanches, Bebidas,
+              etc.)
             </p>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setShowStats(!showStats);
-                if (!showStats) {
-                  loadStats();
-                }
-              }}
-              className="btn-secondary bg-blue-600 text-white hover:bg-blue-700"
+          <div className="flex gap-3 flex-wrap items-center">
+            <select
+              value={filter}
+              onChange={(e) =>
+                setFilter(
+                  e.target.value as
+                    | "padrao"
+                    | "maisVendidos"
+                    | "nome"
+                    | "precoMenor"
+                    | "precoMaior"
+                )
+              }
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm"
             >
-              {showStats ? "Ocultar" : "Estatísticas"}
-            </button>
+              <option value="padrao">Padrão (categoria)</option>
+              <option value="maisVendidos">Mais vendidos</option>
+              <option value="nome">Nome A–Z</option>
+              <option value="precoMenor">Preço: menor</option>
+              <option value="precoMaior">Preço: maior</option>
+            </select>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
               className="btn-primary"
@@ -307,67 +334,6 @@ export default function CardapioPage() {
             </button>
           </div>
         </div>
-
-        {/* Estatísticas */}
-        {showStats && (
-          <div className="card-modern p-6 mb-8 border-2 border-blue-200 animate-fade-in">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900 font-display">
-                Itens Mais Vendidos (30 dias)
-              </h2>
-              <button
-                onClick={() => setShowStats(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </div>
-            {loadingStats ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <p className="mt-2 text-gray-600">Carregando...</p>
-              </div>
-            ) : stats.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                Nenhuma venda registrada ainda
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Item
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Quantidade
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Receita
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {stats.map((stat, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900">
-                          {stat.name}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {stat.quantity}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-primary-600">
-                          R$ {stat.revenue.toFixed(2).replace(".", ",")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Formulário de Adicionar */}
         {showAddForm && (
@@ -512,7 +478,7 @@ export default function CardapioPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-wrap">
                               <h3 className="text-lg font-semibold text-gray-900">
                                 {item.name}
                               </h3>
@@ -525,6 +491,11 @@ export default function CardapioPage() {
                               >
                                 {item.available ? "Disponível" : "Indisponível"}
                               </span>
+                              {getItemCount(item.name) > 0 && (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {getItemCount(item.name)} vendidos
+                                </span>
+                              )}
                             </div>
                             <p className="text-xl font-bold text-primary-600 mt-1">
                               R$ {item.price.toFixed(2).replace(".", ",")}
@@ -560,16 +531,18 @@ export default function CardapioPage() {
                             </button>
                             <button
                               onClick={() => handleEdit(item)}
-                              className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition"
+                              className="p-2 rounded-lg bg-primary-100 text-primary-700 hover:bg-primary-200 transition"
+                              title="Editar"
                             >
-                              Editar
+                              <Pencil size={18} />
                             </button>
                             <button
                               onClick={() => handleDelete(item)}
                               disabled={deletingItem === item.id}
-                              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50"
+                              className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition disabled:opacity-50"
+                              title="Excluir"
                             >
-                              {deletingItem === item.id ? "..." : "Excluir"}
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </div>

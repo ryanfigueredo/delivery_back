@@ -6,7 +6,7 @@ import {
   DynamoDBClient,
   type DynamoDBClientConfig,
 } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || "bot-delivery";
 const REGION =
@@ -124,4 +124,26 @@ export async function getWhatsAppClientConfig(
 
 export function isWhatsAppDynamoEnabled(): boolean {
   return !!TABLE_NAME;
+}
+
+/** Atualiza nome_do_cliente no DynamoDB (para bot usar nome atualizado da loja) */
+export async function updateWhatsAppClientNome(
+  phoneNumberId: string,
+  nomeDoCliente: string
+): Promise<boolean> {
+  try {
+    if (!phoneNumberId || !nomeDoCliente?.trim()) return false;
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { phone_number_id: phoneNumberId },
+        UpdateExpression: "SET nome_do_cliente = :nome",
+        ExpressionAttributeValues: { ":nome": nomeDoCliente.trim() },
+      })
+    );
+    return true;
+  } catch (error) {
+    console.error("[WhatsApp DynamoDB] Erro ao atualizar nome:", error);
+    return false;
+  }
 }

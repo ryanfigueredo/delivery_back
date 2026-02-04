@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/auth";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const startTime = Date.now();
-  const orderId = params.id;
+  const { id: orderId } = await params;
 
   try {
+    const authUser = await getAuthUser(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { message: "Não autenticado" },
+        { status: 401 }
+      );
+    }
+
     // Verifica se o pedido existe
     const existingOrder = await prisma.order.findUnique({
       where: { id: orderId },
@@ -17,13 +26,16 @@ export async function PATCH(
     if (!existingOrder) {
       const responseTime = Date.now() - startTime;
       console.log(
-        `[MARK-PRINTED] Pedido não encontrado - ID: ${orderId} - Tempo de resposta: ${responseTime}ms`
+        `[MARK-PRINTED] Pedido não encontrado - ID: ${orderId} - Tempo: ${responseTime}ms`
       );
-
       return NextResponse.json(
         { message: "Pedido não encontrado" },
         { status: 404 }
       );
+    }
+
+    if (authUser.tenant_id && existingOrder.tenant_id !== authUser.tenant_id) {
+      return NextResponse.json({ message: "Acesso negado" }, { status: 403 });
     }
 
     // Atualiza o status do pedido para 'printed' e limpa solicitação de impressão

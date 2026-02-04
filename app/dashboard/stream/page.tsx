@@ -73,19 +73,9 @@ export default function DashboardStreamPage() {
     }
   };
 
-  const handlePrint = async (orderId: string) => {
-    try {
-      const response = await fetch(`/api/orders/${orderId}/request-print`, {
-        method: "PATCH",
-      });
-      if (response.ok) {
-        // App-admin vai pegar e imprimir na próxima atualização
-      } else {
-        console.error("Erro ao solicitar impressão");
-      }
-    } catch (error) {
-      console.error("Erro ao solicitar impressão:", error);
-    }
+  const handlePrint = (orderId: string) => {
+    // Abre página de impressão para usar impressora normal do PC
+    window.open(`/dashboard/imprimir/${orderId}`, "_blank", "noopener");
   };
 
   return (

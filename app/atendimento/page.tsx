@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, MessageCircle } from "lucide-react";
+import { ChatAtendimento } from "@/components/ChatAtendimento";
 
 interface PriorityConversation {
   phone: string;
   phoneFormatted: string;
   whatsappUrl: string;
-  waitTime: number; // minutos
+  waitTime: number;
   timestamp: number;
   lastMessage: number;
 }
@@ -21,6 +22,9 @@ const fetcher = (url: string) =>
 export default function AtendimentoPage() {
   const previousCountRef = useRef<number>(0);
   const [hasNewConversations, setHasNewConversations] = useState(false);
+  const [selectedConv, setSelectedConv] = useState<PriorityConversation | null>(
+    null
+  );
 
   const {
     data: conversations,
@@ -31,14 +35,13 @@ export default function AtendimentoPage() {
     "/api/admin/priority-conversations",
     fetcher,
     {
-      refreshInterval: 10000, // Atualiza a cada 10 segundos (mais frequente)
+      refreshInterval: 10000,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 5000, // Evita requisições duplicadas
+      dedupingInterval: 5000,
     }
   );
 
-  // Solicitar permissão de notificação ao carregar a página
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch((err) => {
@@ -47,45 +50,22 @@ export default function AtendimentoPage() {
     }
   }, []);
 
-  // Detectar novas conversas e mostrar notificação no navegador
   useEffect(() => {
     if (conversations && conversations.length > 0) {
       const currentCount = conversations.length;
       const previousCount = previousCountRef.current;
-
-      // Se apareceu uma nova conversa
       if (currentCount > previousCount && previousCount > 0) {
-        const newCount = currentCount - previousCount;
         setHasNewConversations(true);
-
-        // Notificação do navegador
-        if ("Notification" in window && Notification.permission === "granted") {
+        if (Notification.permission === "granted") {
           new Notification("🔔 Novo Cliente Pediu Atendimento", {
-            body: `${newCount} novo(s) cliente(s) aguardando atendimento`,
+            body: `${
+              currentCount - previousCount
+            } novo(s) cliente(s) aguardando`,
             icon: "/favicon.ico",
-            tag: "new-conversation",
-            requireInteraction: false,
-          });
-        } else if (
-          "Notification" in window &&
-          Notification.permission === "default"
-        ) {
-          // Solicitar permissão novamente se ainda não foi concedida
-          Notification.requestPermission().then((permission) => {
-            if (permission === "granted" && currentCount > previousCount) {
-              new Notification("🔔 Novo Cliente Pediu Atendimento", {
-                body: `${newCount} novo(s) cliente(s) aguardando atendimento`,
-                icon: "/favicon.ico",
-                tag: "new-conversation",
-              });
-            }
           });
         }
-
-        // Remover o destaque após 5 segundos
         setTimeout(() => setHasNewConversations(false), 5000);
       }
-
       previousCountRef.current = currentCount;
     } else if (conversations && conversations.length === 0) {
       previousCountRef.current = 0;
@@ -100,31 +80,28 @@ export default function AtendimentoPage() {
     return `${hours}h ${mins}min`;
   };
 
-  const openWhatsApp = (whatsappUrl: string) => {
-    window.open(whatsappUrl, "_blank");
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="min-h-screen bg-gray-100 py-6 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">
             Atendimento ao Cliente
           </h1>
-          <p className="text-gray-600">
-            Conversas prioritárias - Clientes que pediram atendimento
+          <p className="text-gray-600 text-sm">
+            Responda clientes direto aqui. As mensagens são enviadas pelo
+            WhatsApp.
           </p>
         </div>
 
         {isLoading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
           </div>
         )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            Erro ao carregar conversas. Tente novamente.
+            Erro ao carregar conversas.
           </div>
         )}
 
@@ -132,98 +109,103 @@ export default function AtendimentoPage() {
           !error &&
           conversations &&
           conversations.length === 0 && (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
+            <div className="bg-white rounded-xl shadow p-8 text-center">
               <CheckCircle2
                 size={48}
                 className="text-emerald-500 mx-auto mb-4"
               />
-              <p className="text-gray-700 text-lg font-semibold mb-2">
+              <p className="text-gray-700 font-semibold mb-2">
                 Nenhuma conversa prioritária no momento
               </p>
-              <p className="text-gray-500">
+              <p className="text-gray-500 text-sm">
                 Clientes que pedirem atendimento aparecerão aqui
               </p>
             </div>
           )}
 
         {!isLoading && !error && conversations && conversations.length > 0 && (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-gray-900">
-                  🔔 Conversas Prioritárias
+          <div className="flex gap-6 flex-col lg:flex-row">
+            {/* Lista de conversas */}
+            <div className="lg:w-80 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                  <MessageCircle size={20} />
+                  Conversas
                 </h2>
                 <span
-                  className={`px-3 py-1 text-white rounded-full text-sm font-semibold transition-all ${
+                  className={`px-3 py-1 text-white rounded-full text-sm font-semibold ${
                     hasNewConversations
-                      ? "bg-primary-500 animate-pulse scale-110"
-                      : "bg-red-500"
+                      ? "bg-green-600 animate-pulse"
+                      : "bg-blue-600"
                   }`}
                 >
                   {conversations.length}
                 </span>
-                {hasNewConversations && (
-                  <span className="text-sm text-primary-600 font-semibold animate-pulse">
-                    ✨ Novo!
-                  </span>
-                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">
-                  Atualizando automaticamente...
-                </span>
-                <button
-                  onClick={() => mutate()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Atualizar
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {conversations.map((conv, index) => (
-                <div
-                  key={conv.phone || index}
-                  className={`bg-white rounded-lg shadow-md p-6 transition-all ${
-                    conv.waitTime >= 10
-                      ? "border-l-4 border-red-500 bg-red-50"
-                      : "border-l-4 border-blue-500"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-2">
-                        {conv.phoneFormatted}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        ⏱️ Aguardando: {formatWaitTime(conv.waitTime)}
-                      </p>
-                    </div>
-                    {conv.waitTime >= 10 && (
-                      <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold">
-                        URGENTE
-                      </span>
-                    )}
-                  </div>
-
+              <div className="space-y-2">
+                {conversations.map((conv) => (
                   <button
-                    onClick={() => openWhatsApp(conv.whatsappUrl)}
-                    className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                    key={conv.phone}
+                    onClick={() => setSelectedConv(conv)}
+                    className={`w-full text-left p-4 rounded-xl transition-all ${
+                      selectedConv?.phone === conv.phone
+                        ? "bg-blue-600 text-white shadow-lg"
+                        : "bg-white hover:bg-gray-50 shadow border border-gray-200"
+                    }`}
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                    </svg>
-                    Abrir WhatsApp
+                    <p className="font-semibold truncate">
+                      {conv.phoneFormatted}
+                    </p>
+                    <p className="text-xs opacity-80">
+                      Aguardando {formatWaitTime(conv.waitTime)}
+                    </p>
                   </button>
-                </div>
-              ))}
+                ))}
+              </div>
+              <button
+                onClick={() => mutate()}
+                className="mt-4 w-full py-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                Atualizar lista
+              </button>
             </div>
-          </>
+
+            {/* Chat - celular + conversa */}
+            <div className="flex-1 min-w-0">
+              {selectedConv ? (
+                <div className="flex justify-center lg:justify-start">
+                  {/* Molde de celular */}
+                  <div className="relative w-full max-w-md">
+                    <div className="bg-gray-900 rounded-[3rem] p-3 shadow-2xl border-4 border-gray-800">
+                      {/* Notch */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl z-10" />
+                      {/* Tela */}
+                      <div className="bg-gray-800 rounded-[2.25rem] overflow-hidden aspect-[9/19] min-h-[500px]">
+                        <ChatAtendimento
+                          phone={selectedConv.phone}
+                          phoneFormatted={selectedConv.phoneFormatted}
+                          waitTime={selectedConv.waitTime}
+                          onClose={() => setSelectedConv(null)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow p-12 text-center border border-gray-200">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <MessageCircle className="text-gray-400" size={32} />
+                  </div>
+                  <p className="text-gray-600 font-medium mb-1">
+                    Selecione uma conversa
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    Clique em um cliente na lista para abrir o chat e responder
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
