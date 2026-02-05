@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PLAN_PRICES } from "@/lib/asaas";
 
+const ASAAS_API_URL = process.env.ASAAS_API_URL || "https://www.asaas.com/api/v3";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
+
 /**
  * Webhook do Asaas para receber notificações de pagamento
  * Documentação: https://docs.asaas.com/docs/webhook
@@ -61,10 +64,45 @@ export async function POST(request: NextRequest) {
     switch (event) {
       case "PAYMENT_CONFIRMED":
       case "PAYMENT_RECEIVED":
-        // Pagamento confirmado - atualizar tenant
+        // Pagamento confirmado - atualizar tenant e PLANO
+        // Buscar assinatura para determinar o plano baseado no valor
+        let planTypeToActivate = tenant.plan_type || "basic";
+        
+        if (subscriptionId) {
+          try {
+            const subscriptionResponse = await fetch(
+              `${process.env.ASAAS_API_URL || "https://www.asaas.com/api/v3"}/subscriptions/${subscriptionId}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  access_token: process.env.ASAAS_API_KEY || "",
+                },
+              }
+            );
+            
+            if (subscriptionResponse.ok) {
+              const subscriptionData = await subscriptionResponse.json();
+              const subscriptionValue = subscriptionData.value || 0;
+              
+              // Determinar plano baseado no valor
+              if (subscriptionValue >= PLAN_PRICES.premium) {
+                planTypeToActivate = "premium";
+              } else if (subscriptionValue >= PLAN_PRICES.complete) {
+                planTypeToActivate = "complete";
+              } else {
+                planTypeToActivate = "basic";
+              }
+            }
+          } catch (error) {
+            console.error("[Asaas Webhook] Erro ao buscar assinatura:", error);
+            // Usar plano atual do tenant se não conseguir buscar
+          }
+        }
+        
         await prisma.tenant.update({
           where: { id: tenant.id },
           data: {
+            plan_type: planTypeToActivate, // ATUALIZAR PLANO APENAS AQUI (após pagamento confirmado)
             subscription_status: "active",
             subscription_payment_date: payment.paymentDate
               ? new Date(payment.paymentDate)
@@ -74,7 +112,7 @@ export async function POST(request: NextRequest) {
               : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
           },
         });
-        console.log(`[Asaas Webhook] Pagamento confirmado para tenant: ${tenant.id}`);
+        console.log(`[Asaas Webhook] Pagamento confirmado para tenant: ${tenant.id}, plano ativado: ${planTypeToActivate}`);
         break;
 
       case "PAYMENT_OVERDUE":
@@ -149,20 +187,20 @@ export async function POST(request: NextRequest) {
         break;
 
       case "SUBSCRIPTION_CREATED":
-        // Assinatura criada - atualizar status
+        // Assinatura criada - APENAS salvar subscription_id, NÃO atualizar plano ainda
         if (subscription) {
           await prisma.tenant.update({
             where: { id: tenant.id },
             data: {
               asaas_subscription_id: subscription.id,
-              subscription_status: subscription.status === "ACTIVE" ? "active" : "pending",
-              plan_type: tenant.plan_type || "basic",
+              subscription_status: "pending", // Sempre pending até pagamento confirmado
+              // NÃO atualizar plan_type aqui - só após PAYMENT_CONFIRMED
               subscription_expires_at: subscription.nextDueDate
                 ? new Date(subscription.nextDueDate)
                 : null,
             },
           });
-          console.log(`[Asaas Webhook] Assinatura criada para tenant: ${tenant.id}, status: ${subscription.status}`);
+          console.log(`[Asaas Webhook] Assinatura criada para tenant: ${tenant.id} - aguardando pagamento`);
         }
         break;
 

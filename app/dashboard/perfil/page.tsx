@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Save, Loader2, AlertCircle, CheckCircle2, CreditCard, ExternalLink } from "lucide-react";
+import { User, Save, Loader2, AlertCircle, CheckCircle2, CreditCard, ExternalLink, Camera, Lock, UserPlus, Store } from "lucide-react";
 
 interface CustomerData {
   customer_cpf_cnpj: string;
@@ -160,21 +160,105 @@ function PerfilPageContent() {
           <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
         </div>
 
-        {/* Seção de Assinatura */}
-        <div className="mb-8 p-6 bg-gradient-to-r from-primary-50 to-blue-50 rounded-lg border border-primary-200">
+        {/* Seção de Foto de Perfil */}
+        <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Foto de Perfil</h2>
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                <User size={48} className="text-gray-400" />
+              </div>
+              <button className="absolute bottom-0 right-0 bg-primary-600 text-white p-2 rounded-full hover:bg-primary-700 transition">
+                <Camera size={16} />
+              </button>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-2">Adicione uma foto para personalizar seu perfil</p>
+              <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                Alterar foto
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção de Mudança de Senha */}
+        <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Lock size={20} />
+            Segurança
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Senha Atual
+              </label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Digite sua senha atual"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nova Senha
+              </label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Digite sua nova senha"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirmar Nova Senha
+              </label>
+              <input
+                type="password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Confirme sua nova senha"
+              />
+            </div>
+            <button className="bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition">
+              Alterar Senha
+            </button>
+          </div>
+        </div>
+
+        {/* Seção de Usuários */}
+        <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <UserPlus size={20} />
+              Usuários do Sistema
+            </h2>
+            <button className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition">
+              <UserPlus size={16} />
+              Adicionar Usuário
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Gerencie os usuários que têm acesso ao sistema da sua loja.
+          </p>
+          <div className="border-t border-gray-200 pt-4">
+            <p className="text-sm text-gray-500">Lista de usuários será exibida aqui</p>
+          </div>
+        </div>
+
+        {/* Seção de Configurações da Loja */}
+        <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CreditCard className="text-primary-600" size={24} />
+              <Store className="text-blue-600" size={24} />
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Assinatura e Pagamento</h2>
-                <p className="text-sm text-gray-600">Gerencie seu plano e forma de pagamento</p>
+                <h2 className="text-lg font-semibold text-gray-900">Configurações da Loja</h2>
+                <p className="text-sm text-gray-600">Gerencie configurações da loja e entregas</p>
               </div>
             </div>
             <a
-              href="/dashboard/pagamento"
-              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+              href="/dashboard/configuracoes-loja"
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
             >
-              <span>Gerenciar Assinatura</span>
+              <span>Acessar Configurações</span>
               <ExternalLink size={16} />
             </a>
           </div>
@@ -182,7 +266,7 @@ function PerfilPageContent() {
 
         {/* Seção de Dados do Cliente */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dados do Cliente</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dados Pessoais</h2>
           <p className="text-gray-600 mb-6">
             Preencha seus dados para realizar assinaturas e pagamentos. Essas informações são necessárias para processar pagamentos via Asaas.
           </p>

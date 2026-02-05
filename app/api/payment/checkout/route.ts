@@ -194,12 +194,12 @@ export async function POST(request: NextRequest) {
 
     const asaasSubscription = await createAsaasSubscription(subscriptionData);
 
-    // Atualizar tenant com subscription_id
+    // Atualizar tenant com subscription_id (SEM atualizar plan_type até pagamento confirmado)
     await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
         asaas_subscription_id: asaasSubscription.id,
-        plan_type: planType,
+        // NÃO atualizar plan_type aqui - só após pagamento confirmado via webhook
         subscription_status: "pending",
       },
     });

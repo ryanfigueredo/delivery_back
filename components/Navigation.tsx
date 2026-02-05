@@ -5,8 +5,6 @@ import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   UtensilsCrossed,
-  Store,
-  Truck,
   MessageCircle,
   Crown,
   Building2,
@@ -17,6 +15,7 @@ import {
   Menu,
   X,
   Settings,
+  CreditCard,
 } from "lucide-react";
 import { AppIcon } from "./AppIcon";
 
@@ -126,8 +125,6 @@ export function Navigation() {
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/dashboard/stream", label: "Pedidos", icon: ClipboardList },
         { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
-        { href: "/loja", label: "Loja", icon: Store },
-        { href: "/dashboard/entregas", label: "Entregas", icon: Truck },
         { href: "/atendimento", label: "Atendimento", icon: MessageCircle },
       ];
 
@@ -218,14 +215,24 @@ export function Navigation() {
                     </p>
                   </div>
                   {!isSuperAdmin && (
-                    <a
-                      href="/dashboard/perfil"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      <Settings size={iconSize} className="text-gray-500" />
-                      <span>Configurações</span>
-                    </a>
+                    <>
+                      <a
+                        href="/dashboard/perfil"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Settings size={iconSize} className="text-gray-500" />
+                        <span>Configurações</span>
+                      </a>
+                      <a
+                        href="/dashboard/pagamento"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <CreditCard size={iconSize} className="text-gray-500" />
+                        <span>Assinaturas</span>
+                      </a>
+                    </>
                   )}
                   <button
                     type="button"
