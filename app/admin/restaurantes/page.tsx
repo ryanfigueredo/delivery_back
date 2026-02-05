@@ -62,6 +62,9 @@ export default function RestaurantesPage() {
     meta_phone_number_id: "",
     meta_access_token: "",
     meta_verify_token: "",
+    meta_business_account_id: "",
+    desktop_api_url: "",
+    configureDynamoDB: false,
   });
 
   useEffect(() => {
@@ -112,26 +115,58 @@ export default function RestaurantesPage() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        const tenant = data.tenant;
-        setCreatedTenant(tenant);
-        setShowCreateForm(false);
-        setShowUserForm(null);
-        setFormData({
-          name: "",
-          slug: "",
-          username: "",
-          password: "",
-          userName: "",
-          whatsapp_phone: "",
-          meta_phone_number_id: "",
-          meta_access_token: "",
-          meta_verify_token: "",
-        });
-        loadData();
-      } else {
-        alert(`❌ Erro: ${data.error}`);
+      if (!data.success) {
+        alert(`❌ Erro ao criar tenant: ${data.error}`);
+        return;
       }
+
+      const tenant = data.tenant;
+
+      // Se configurar DynamoDB foi marcado, criar registro lá também
+      if (formData.configureDynamoDB && formData.meta_phone_number_id && formData.meta_access_token) {
+        try {
+          const dynamoRes = await fetch(`/api/admin/tenants/${tenant.id}/dynamodb`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone_number_id: formData.meta_phone_number_id,
+              business_account_id: formData.meta_business_account_id || undefined,
+              token_api_meta: formData.meta_access_token,
+              meta_verify_token: formData.meta_verify_token || undefined,
+              desktop_api_url: formData.desktop_api_url || undefined,
+            }),
+          });
+
+          const dynamoData = await dynamoRes.json();
+          if (!dynamoData.success) {
+            alert(`⚠️ Tenant criado, mas erro ao configurar DynamoDB: ${dynamoData.error}`);
+          }
+        } catch (dynamoError) {
+          console.error("Erro ao configurar DynamoDB:", dynamoError);
+          alert("⚠️ Tenant criado, mas erro ao configurar DynamoDB");
+        }
+      }
+
+      setCreatedTenant(tenant);
+      setShowCreateForm(false);
+      setShowUserForm(null);
+      setFormData({
+        name: "",
+        slug: "",
+        business_type: "RESTAURANTE",
+        show_prices_on_bot: true,
+        username: "",
+        password: "",
+        userName: "",
+        whatsapp_phone: "",
+        meta_phone_number_id: "",
+        meta_access_token: "",
+        meta_verify_token: "",
+        meta_business_account_id: "",
+        desktop_api_url: "",
+        configureDynamoDB: false,
+      });
+      loadData();
     } catch (error) {
       console.error("Erro ao criar tenant:", error);
       alert("❌ Erro ao criar restaurante");
@@ -238,6 +273,9 @@ export default function RestaurantesPage() {
           meta_phone_number_id: "",
           meta_access_token: "",
           meta_verify_token: "",
+          meta_business_account_id: "",
+          desktop_api_url: "",
+          configureDynamoDB: false,
         });
         loadData();
       } else {
@@ -441,6 +479,145 @@ export default function RestaurantesPage() {
                 </div>
               )}
 
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center mb-4">
+                  <input
+                    type="checkbox"
+                    id="configureDynamoDB"
+                    checked={formData.configureDynamoDB}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        configureDynamoDB: e.target.checked,
+                      })
+                    }
+                    className="mr-2"
+                  />
+                  <label htmlFor="configureDynamoDB" className="text-sm font-medium text-gray-700">
+                    Configurar Bot WhatsApp (DynamoDB)
+                  </label>
+                </div>
+
+                {formData.configureDynamoDB && (
+                  <div className="bg-blue-50 p-4 rounded-lg space-y-4">
+                    <h3 className="font-semibold text-gray-900">
+                      Credenciais Meta (WhatsApp Business API)
+                    </h3>
+                    <p className="text-xs text-gray-600 mb-4">
+                      Configure as credenciais do Meta para o número de telefone deste cliente.
+                      Essas informações serão salvas no DynamoDB para o bot funcionar.
+                    </p>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number ID (Meta) *
+                      </label>
+                      <input
+                        type="text"
+                        required={formData.configureDynamoDB}
+                        value={formData.meta_phone_number_id}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            meta_phone_number_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="123456789012345"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Phone Number ID do número de telefone do cliente no Meta
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Access Token (Meta) *
+                      </label>
+                      <input
+                        type="text"
+                        required={formData.configureDynamoDB}
+                        value={formData.meta_access_token}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            meta_access_token: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="EAAxxxxxxxxxxxxx"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Access Token do Meta (pode ser da sua conta Meta)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Business Account ID (WABA ID) - Opcional
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.meta_business_account_id}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            meta_business_account_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="987654321098765"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        WhatsApp Business Account ID (opcional, mas recomendado)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Verify Token - Opcional
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.meta_verify_token}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            meta_verify_token: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="seu-verify-token"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Token para verificação do webhook (opcional)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Desktop API URL - Opcional
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.desktop_api_url}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            desktop_api_url: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        placeholder="https://seu-dominio.vercel.app"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        URL da API (deixe vazio para usar padrão)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -535,6 +712,9 @@ export default function RestaurantesPage() {
                       meta_phone_number_id: "",
                       meta_access_token: "",
                       meta_verify_token: "",
+                      meta_business_account_id: "",
+                      desktop_api_url: "",
+                      configureDynamoDB: false,
                     });
                   }}
                   className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
