@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { PLAN_PRICES } from "@/lib/asaas";
 
 /**
  * Webhook do Asaas para receber notificações de pagamento
@@ -19,25 +20,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const event = body.event;
     const payment = body.payment;
+    const subscription = body.subscription;
 
     console.log(`[Asaas Webhook] Evento recebido: ${event}`, {
       paymentId: payment?.id,
-      subscriptionId: payment?.subscription,
-      status: payment?.status,
+      subscriptionId: payment?.subscription || subscription?.id,
+      status: payment?.status || subscription?.status,
     });
 
     // Buscar tenant pelo externalReference ou subscription_id
     let tenant = null;
+    const subscriptionId = payment?.subscription || subscription?.id;
 
-    if (payment?.subscription) {
+    if (subscriptionId) {
       tenant = await prisma.tenant.findFirst({
-        where: { asaas_subscription_id: payment.subscription },
+        where: { asaas_subscription_id: subscriptionId },
       });
     }
 
     if (!tenant && payment?.externalReference) {
       tenant = await prisma.tenant.findUnique({
         where: { id: payment.externalReference },
+      });
+    }
+
+    if (!tenant && subscription?.externalReference) {
+      tenant = await prisma.tenant.findUnique({
+        where: { id: subscription.externalReference },
       });
     }
 
@@ -99,6 +108,44 @@ export async function POST(request: NextRequest) {
           },
         });
         console.log(`[Asaas Webhook] Assinatura cancelada para tenant: ${tenant.id}`);
+        break;
+
+      case "SUBSCRIPTION_UPDATED":
+        // Assinatura atualizada (mudança de plano, valor, etc.)
+        if (subscription) {
+          // Determinar novo plano baseado no valor
+          const newValue = subscription.value || 0;
+          let newPlanType = "basic";
+          
+          if (newValue >= PLAN_PRICES.premium) {
+            newPlanType = "premium";
+          } else if (newValue >= PLAN_PRICES.complete) {
+            newPlanType = "complete";
+          }
+
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: {
+              plan_type: newPlanType,
+              subscription_status: subscription.status === "ACTIVE" ? "active" : tenant.subscription_status || "active",
+              subscription_expires_at: subscription.nextDueDate
+                ? new Date(subscription.nextDueDate)
+                : tenant.subscription_expires_at,
+            },
+          });
+          console.log(`[Asaas Webhook] Assinatura atualizada para tenant: ${tenant.id}, novo plano: ${newPlanType}`);
+        }
+        break;
+
+      case "SUBSCRIPTION_INACTIVATED":
+        // Assinatura inativada
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            subscription_status: "cancelled",
+          },
+        });
+        console.log(`[Asaas Webhook] Assinatura inativada para tenant: ${tenant.id}`);
         break;
 
       default:

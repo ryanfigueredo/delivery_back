@@ -131,16 +131,42 @@ export default function PagamentoPage() {
     setLoading(true);
     setError(null);
 
+    // Se já tem assinatura e está mudando de plano, usar endpoint de atualização
+    const isUpdatingPlan = currentSubscription && currentSubscription.planType !== selectedPlan.id;
+
     try {
-      const response = await fetch("/api/payment/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planType: selectedPlan.id,
-          paymentMethod,
-          cardData: paymentMethod === "credit_card" ? cardData : undefined,
-        }),
-      });
+      let response;
+      
+      if (isUpdatingPlan) {
+        // Atualizar plano existente
+        response = await fetch("/api/payment/update-plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planType: selectedPlan.id,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert("✅ Plano atualizado com sucesso! A mudança será aplicada no próximo ciclo de cobrança.");
+          router.push("/dashboard");
+          return;
+        } else {
+          throw new Error(data.error || "Erro ao atualizar plano");
+        }
+      } else {
+        // Criar nova assinatura
+        response = await fetch("/api/payment/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planType: selectedPlan.id,
+            paymentMethod,
+            cardData: paymentMethod === "credit_card" ? cardData : undefined,
+          }),
+        });
+      }
 
       const data = await response.json();
 
@@ -174,56 +200,99 @@ export default function PagamentoPage() {
         {/* Assinatura Atual */}
         {currentSubscription && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 size={20} className="text-blue-600" />
-              <span className="font-semibold text-blue-900">Assinatura Ativa</span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={20} className="text-blue-600" />
+                <span className="font-semibold text-blue-900">Assinatura Ativa</span>
+              </div>
+              {!selectedPlan && (
+                <button
+                  onClick={() => {
+                    // Mostrar opção de atualizar plano
+                    setSelectedPlan(null);
+                    setPaymentMethod(null);
+                  }}
+                  className="text-sm text-blue-700 hover:text-blue-900 font-medium"
+                >
+                  Alterar Plano →
+                </button>
+              )}
             </div>
             <p className="text-sm text-blue-800">
-              Plano: <strong>{currentSubscription.planName}</strong>
+              Plano atual: <strong>{currentSubscription.planName}</strong>
               {currentSubscription.expiresAt && (
                 <> • Vence em: {new Date(currentSubscription.expiresAt).toLocaleDateString("pt-BR")}</>
               )}
             </p>
+            {currentSubscription.isExpiringSoon && (
+              <p className="text-xs text-amber-700 mt-2">
+                ⚠️ Sua assinatura vence em breve. Renove para continuar usando o sistema.
+              </p>
+            )}
           </div>
         )}
 
         {/* Seleção de Plano */}
         {!selectedPlan ? (
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {PLANS.map((plan) => (
-              <div
-                key={plan.id}
-                onClick={() => handleSelectPlan(plan)}
-                className={`bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all hover:shadow-lg border-2 ${
-                  plan.id === "complete"
-                    ? "border-amber-500 scale-105"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                {plan.id === "complete" && (
-                  <div className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-3">
-                    RECOMENDADO
+            {PLANS.map((plan) => {
+              const isCurrentPlan = currentSubscription?.planType === plan.id;
+              const currentPlanType = currentSubscription?.planType;
+              const isUpgrade = currentSubscription && 
+                (plan.id === "premium" && currentPlanType !== "premium") ||
+                (plan.id === "complete" && currentPlanType === "basic");
+              
+              return (
+                <div
+                  key={plan.id}
+                  onClick={() => !isCurrentPlan && handleSelectPlan(plan)}
+                  className={`bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg border-2 ${
+                    isCurrentPlan
+                      ? "border-green-500 bg-green-50 cursor-default"
+                      : plan.id === "complete"
+                      ? "border-amber-500 scale-105 cursor-pointer"
+                      : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                  }`}
+                >
+                  {isCurrentPlan && (
+                    <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-3">
+                      PLANO ATUAL
+                    </div>
+                  )}
+                  {!isCurrentPlan && plan.id === "complete" && (
+                    <div className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full inline-block mb-3">
+                      RECOMENDADO
+                    </div>
+                  )}
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    R$ {plan.price.toFixed(2).replace(".", ",")}
+                    <span className="text-base text-gray-500 font-normal">/mês</span>
                   </div>
-                )}
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                <div className="text-3xl font-bold text-gray-900 mb-1">
-                  R$ {plan.price.toFixed(2).replace(".", ",")}
-                  <span className="text-base text-gray-500 font-normal">/mês</span>
+                  <p className="text-sm text-gray-600 mb-4">{plan.messages}</p>
+                  <ul className="space-y-2 mb-4">
+                    {plan.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrentPlan ? (
+                    <button 
+                      disabled
+                      className="w-full bg-gray-300 text-gray-600 py-2 rounded-lg font-semibold cursor-not-allowed"
+                    >
+                      Plano Atual
+                    </button>
+                  ) : (
+                    <button className="w-full bg-primary-600 text-white py-2 rounded-lg font-semibold hover:bg-primary-700 transition">
+                      {isUpgrade ? "Fazer Upgrade" : currentSubscription ? "Alterar Plano" : "Escolher Plano"}
+                    </button>
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 mb-4">{plan.messages}</p>
-                <ul className="space-y-2 mb-4">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-gray-700">
-                      <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <button className="w-full bg-primary-600 text-white py-2 rounded-lg font-semibold hover:bg-primary-700 transition">
-                  Escolher Plano
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg p-8">

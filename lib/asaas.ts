@@ -226,6 +226,39 @@ export async function getAsaasSubscription(
 }
 
 /**
+ * Atualiza uma assinatura no Asaas (mudança de plano, valor, etc.)
+ */
+export async function updateAsaasSubscription(
+  subscriptionId: string,
+  updates: {
+    value?: number;
+    billingType?: 'CREDIT_CARD' | 'PIX' | 'BOLETO' | 'DEBIT_CARD';
+    cycle?: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY';
+    description?: string;
+  }
+): Promise<any> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
+  const response = await fetch(`${ASAAS_API_URL}/subscriptions/${subscriptionId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: ASAAS_API_KEY,
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Erro ao atualizar assinatura no Asaas: ${JSON.stringify(error)}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Cancela uma assinatura no Asaas
  */
 export async function cancelAsaasSubscription(
