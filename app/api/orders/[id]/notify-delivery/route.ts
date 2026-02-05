@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateApiKey } from '@/lib/auth'
+import { checkMessageLimit, incrementMessageUsage } from '@/lib/message-limits'
 
 /**
  * API para notificar cliente via WhatsApp quando pedido sair para entrega
@@ -40,6 +41,28 @@ export async function POST(
         { message: 'Pedido não está marcado como "saiu para entrega"' },
         { status: 400 }
       )
+    }
+
+    // Verificar limite de mensagens
+    try {
+      const limitCheck = await checkMessageLimit(order.tenant_id)
+      if (!limitCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Limite de mensagens excedido. Plano: ${limitCheck.planName} (${limitCheck.current}/${limitCheck.limit} mensagens usadas).`,
+            limit_info: {
+              current: limitCheck.current,
+              limit: limitCheck.limit,
+              plan: limitCheck.planName
+            }
+          },
+          { status: 429 }
+        )
+      }
+    } catch (error) {
+      console.error('[NotifyDelivery] Erro ao verificar limite:', error)
+      // Não bloqueia se houver erro na verificação
     }
 
     // Preparar mensagem para o cliente
@@ -83,6 +106,12 @@ Obrigado por escolher Pedidos Express! ❤️`
 
       if (botResponse.ok) {
         console.log(`✅ Mensagem de entrega enviada para ${order.customer_phone}`)
+        // Incrementar contador de mensagens
+        try {
+          await incrementMessageUsage(order.tenant_id, 1)
+        } catch (error) {
+          console.error('[NotifyDelivery] Erro ao incrementar uso:', error)
+        }
       } else {
         console.warn('Bot API não respondeu, mas pedido foi marcado como saiu')
       }

@@ -23,15 +23,38 @@ model Tenant {
   name        String   // Nome do restaurante (ex: "Tamboril Burguer")
   slug        String   @unique // Identificador único (ex: "tamboril-burguer")
   api_key     String   @unique // API key única para cada tenant
-  whatsapp_phone String? // Telefone do WhatsApp do bot
+  whatsapp_phone String? // Telefone do WhatsApp do bot (formato: 5521999999999)
   logo_url    String?  // URL da logo no S3
   is_active   Boolean  @default(true)
+  
+  // Credenciais Meta Cloud API (WhatsApp Business)
+  meta_phone_number_id String? // Phone Number ID da Meta
+  meta_access_token    String? // Access Token da Meta (criptografado)
+  meta_verify_token    String? // Verify Token para webhook
+  meta_business_account_id String? // Business Account ID
+  
+  // Status e configuração do bot
+  bot_configured       Boolean  @default(false) // Se o bot está configurado
+  bot_last_heartbeat   DateTime? // Última atividade do bot
+  
+  // Plano e limites
+  plan_type            String   @default("basic") // basic, complete, premium
+  plan_message_limit   Int      @default(1000) // Limite de mensagens do plano
+  
+  // Assinatura e pagamento
+  subscription_payment_date DateTime? // Data do último pagamento
+  subscription_expires_at   DateTime? // Data de vencimento da assinatura
+  asaas_subscription_id     String?   // ID da assinatura no Asaas
+  asaas_customer_id         String?   // ID do cliente no Asaas
+  subscription_status       String?   @default("active") // active, expired, cancelled, pending
+  
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
   // Relações
   orders      Order[]
   users       User[]
+  message_usage MessageUsage[]
 
   @@map("tenants")
 }
@@ -79,4 +102,23 @@ model User {
   @@unique([tenant_id, username]) // Username único por tenant
   @@index([tenant_id])
   @@map("users")
+}
+
+// Controle de uso de mensagens WhatsApp
+model MessageUsage {
+  id          String   @id @default(uuid())
+  tenant_id   String
+  month       Int      // 1-12
+  year        Int      // 2026
+  messages_sent Int    @default(0)
+  conversations_started Int @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  
+  @@unique([tenant_id, month, year])
+  @@index([tenant_id])
+  @@index([tenant_id, year, month])
+  @@map("message_usage")
 }

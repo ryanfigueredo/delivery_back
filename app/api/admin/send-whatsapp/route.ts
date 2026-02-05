@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-session";
 import { validateApiKey, validateBasicAuth } from "@/lib/auth";
+import { checkMessageLimit, incrementMessageUsage } from "@/lib/message-limits";
+import { prisma } from "@/lib/prisma";
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || "v21.0";
 
@@ -35,6 +37,51 @@ export async function POST(request: NextRequest) {
         { success: false, error: "phone e message são obrigatórios" },
         { status: 400 }
       );
+    }
+
+    // Identificar tenant
+    let tenantId: string | null = null;
+    if (session) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.id },
+        select: { tenant_id: true }
+      });
+      tenantId = user?.tenant_id || null;
+    } else {
+      const apiValidation = await validateApiKey(request);
+      if (apiValidation.isValid && apiValidation.tenant) {
+        tenantId = apiValidation.tenant.id;
+      } else {
+        const basicAuth = await validateBasicAuth(request);
+        if (basicAuth.isValid && basicAuth.user?.tenant_id) {
+          tenantId = basicAuth.user.tenant_id;
+        }
+      }
+    }
+
+    // Verificar limite de mensagens
+    if (tenantId) {
+      try {
+        const limitCheck = await checkMessageLimit(tenantId);
+        if (!limitCheck.allowed) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Limite de mensagens excedido. Plano: ${limitCheck.planName} (${limitCheck.current}/${limitCheck.limit} mensagens usadas). Entre em contato para fazer upgrade.`,
+              limit_info: {
+                current: limitCheck.current,
+                limit: limitCheck.limit,
+                plan: limitCheck.planName,
+                percentage: limitCheck.percentage
+              }
+            },
+            { status: 429 }
+          );
+        }
+      } catch (error) {
+        console.error("[SendWhatsApp] Erro ao verificar limite:", error);
+        // Não bloqueia se houver erro na verificação, mas loga
+      }
     }
 
     const token = process.env.TOKEN_API_META;
@@ -77,6 +124,17 @@ export async function POST(request: NextRequest) {
         { status: res.status }
       );
     }
+
+    // Incrementar contador de mensagens se envio foi bem-sucedido
+    if (tenantId) {
+      try {
+        await incrementMessageUsage(tenantId, 1);
+      } catch (error) {
+        console.error("[SendWhatsApp] Erro ao incrementar uso:", error);
+        // Não falha a operação, apenas loga
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (e: any) {
     console.error("[SendWhatsApp] Erro:", e);
