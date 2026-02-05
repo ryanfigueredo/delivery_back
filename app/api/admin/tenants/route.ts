@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
         name: t.name,
         slug: t.slug,
         is_active: t.is_active,
+        business_type: t.business_type,
+        show_prices_on_bot: t.show_prices_on_bot,
         whatsapp_phone: t.whatsapp_phone,
         bot_configured: t.bot_configured || false,
         bot_last_heartbeat: t.bot_last_heartbeat?.toISOString(),
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, createUser, username, password, userName } = body;
+    const { name, slug, business_type, show_prices_on_bot, createUser, username, password, userName } = body;
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -106,6 +108,8 @@ export async function POST(request: NextRequest) {
         slug,
         api_key: apiKey,
         is_active: true,
+        business_type: business_type || "RESTAURANTE",
+        show_prices_on_bot: show_prices_on_bot !== false,
       },
     });
 

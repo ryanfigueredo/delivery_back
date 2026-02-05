@@ -9,6 +9,8 @@ interface Tenant {
   name: string;
   slug: string;
   is_active: boolean;
+  business_type?: string;
+  show_prices_on_bot?: boolean;
   created_at: string;
   whatsapp_phone?: string | null;
   bot_configured?: boolean | null;
@@ -51,6 +53,8 @@ export default function RestaurantesPage() {
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
+    business_type: "RESTAURANTE" as "RESTAURANTE" | "DENTISTA",
+    show_prices_on_bot: true,
     username: "",
     password: "",
     userName: "",
@@ -98,6 +102,8 @@ export default function RestaurantesPage() {
         body: JSON.stringify({
           name: formData.name,
           slug: formData.slug,
+          business_type: formData.business_type,
+          show_prices_on_bot: formData.show_prices_on_bot,
           createUser: showUserForm !== null,
           username: showUserForm ? formData.username : undefined,
           password: showUserForm ? formData.password : undefined,
@@ -223,6 +229,8 @@ export default function RestaurantesPage() {
         setFormData({
           name: "",
           slug: "",
+          business_type: "RESTAURANTE",
+          show_prices_on_bot: true,
           username: "",
           password: "",
           userName: "",
@@ -384,6 +392,55 @@ export default function RestaurantesPage() {
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Negócio *
+                </label>
+                <select
+                  required
+                  value={formData.business_type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      business_type: e.target.value as "RESTAURANTE" | "DENTISTA",
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="RESTAURANTE">Restaurante</option>
+                  <option value="DENTISTA">Dentista</option>
+                </select>
+                <p className="mt-1 text-sm text-gray-500">
+                  Define o tipo de negócio e adapta a interface automaticamente
+                </p>
+              </div>
+
+              {formData.business_type === "DENTISTA" && (
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="show_prices_on_bot"
+                    checked={formData.show_prices_on_bot}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        show_prices_on_bot: e.target.checked,
+                      })
+                    }
+                    className="mr-2"
+                  />
+                  <label
+                    htmlFor="show_prices_on_bot"
+                    className="text-sm text-gray-700"
+                  >
+                    Exibir preços no bot WhatsApp
+                  </label>
+                  <p className="ml-2 text-xs text-gray-500">
+                    (Se desmarcado, o bot informará que valores dependem de avaliação clínica)
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -469,6 +526,8 @@ export default function RestaurantesPage() {
                     setFormData({
                       name: "",
                       slug: "",
+                      business_type: "RESTAURANTE",
+                      show_prices_on_bot: true,
                       username: "",
                       password: "",
                       userName: "",
@@ -538,6 +597,15 @@ export default function RestaurantesPage() {
                       <tr key={tenant.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                           {tenant.name}
+                          {tenant.business_type && (
+                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${
+                              tenant.business_type === "DENTISTA" 
+                                ? "bg-blue-100 text-blue-700" 
+                                : "bg-orange-100 text-orange-700"
+                            }`}>
+                              {tenant.business_type === "DENTISTA" ? "🦷 Dentista" : "🍔 Restaurante"}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                           <code className="text-xs bg-gray-100 px-2 py-1 rounded">{tenant.slug}</code>
