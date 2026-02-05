@@ -187,6 +187,11 @@ export default function PagamentoPage() {
       const data = await response.json();
 
       if (!data.success) {
+        // Se faltam dados do cliente, redirecionar para perfil
+        if (data.redirectTo) {
+          router.push(data.redirectTo);
+          return;
+        }
         throw new Error(data.error || "Erro ao processar pagamento");
       }
 

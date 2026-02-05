@@ -55,6 +55,17 @@ model Tenant {
   asaas_customer_id         String?   // ID do cliente no Asaas
   subscription_status       String?   @default("active") // active, expired, cancelled, pending
   
+  // Dados do cliente para pagamento (Asaas)
+  customer_cpf_cnpj         String?   // CPF ou CNPJ do cliente
+  customer_phone            String?   // Telefone do cliente (formato: 5521999999999)
+  customer_postal_code      String?   // CEP
+  customer_address          String?   // Endereço completo
+  customer_address_number   String?   // Número do endereço
+  customer_address_complement String? // Complemento
+  customer_province         String?   // Bairro
+  customer_city             String?   // Cidade
+  customer_state            String?   // Estado (UF)
+  
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 

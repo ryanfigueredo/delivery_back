@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
         slug: true,
         asaas_customer_id: true,
         asaas_subscription_id: true,
+        customer_cpf_cnpj: true,
+        customer_phone: true,
+        customer_postal_code: true,
+        customer_address: true,
+        customer_address_number: true,
+        customer_address_complement: true,
+        customer_province: true,
+        customer_city: true,
+        customer_state: true,
       },
     });
 
@@ -39,6 +48,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Tenant não encontrado" },
         { status: 404 }
+      );
+    }
+
+    // Verificar se tem CPF/CNPJ (obrigatório para Asaas)
+    if (!tenant.customer_cpf_cnpj) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Dados incompletos",
+          missingFields: ["customer_cpf_cnpj"],
+          redirectTo: "/dashboard/perfil?redirect=/dashboard/pagamento",
+        },
+        { status: 400 }
       );
     }
 
@@ -52,11 +74,22 @@ export async function POST(request: NextRequest) {
     let customerId = tenant.asaas_customer_id;
 
     if (!customerId) {
-      // Criar cliente no Asaas
+      // Criar cliente no Asaas com dados completos
+      const cpfCnpjCleaned = tenant.customer_cpf_cnpj.replace(/\D/g, "");
+      
       const asaasCustomer = await createAsaasCustomer({
         name: tenant.name,
         email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,
-        // Adicionar outros dados se disponíveis
+        cpfCnpj: cpfCnpjCleaned,
+        phone: tenant.customer_phone || undefined,
+        mobilePhone: tenant.customer_phone || undefined,
+        postalCode: tenant.customer_postal_code?.replace(/\D/g, "") || undefined,
+        address: tenant.customer_address || undefined,
+        addressNumber: tenant.customer_address_number || undefined,
+        complement: tenant.customer_address_complement || undefined,
+        province: tenant.customer_province || undefined,
+        city: tenant.customer_city || undefined,
+        state: tenant.customer_state || undefined,
       });
 
       customerId = asaasCustomer.id;
@@ -94,13 +127,16 @@ export async function POST(request: NextRequest) {
         ccv: cardData.ccv,
       };
 
+      const cpfCnpjCleaned = tenant.customer_cpf_cnpj?.replace(/\D/g, "") || "";
+      
       subscriptionData.creditCardHolderInfo = {
         name: cardData.holderName,
         email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,
-        cpfCnpj: "", // Adicionar se disponível
-        postalCode: "", // Adicionar se disponível
-        addressNumber: "", // Adicionar se disponível
-        phone: "", // Adicionar se disponível
+        cpfCnpj: cpfCnpjCleaned,
+        postalCode: tenant.customer_postal_code?.replace(/\D/g, "") || "",
+        addressNumber: tenant.customer_address_number || "",
+        addressComplement: tenant.customer_address_complement || undefined,
+        phone: tenant.customer_phone?.replace(/\D/g, "") || "",
       };
     }
 
