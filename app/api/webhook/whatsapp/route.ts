@@ -145,6 +145,12 @@ export async function POST(request: NextRequest) {
     
     // Obter endereço de entrega (apenas para delivery)
     const deliveryAddress = body.delivery_address || null
+    
+    // Obter campos de agendamento (para dentistas)
+    const appointmentDate = body.appointment_date ? new Date(body.appointment_date) : null
+    const appointmentType = body.appointment_type || null
+    const doctorNotes = body.doctor_notes || null
+    const patientNotes = body.patient_notes || null
 
     // Normalizar telefone (remover caracteres especiais e garantir formato correto)
     let normalizedPhone = orderData.customer_phone.replace(/\D/g, '')
@@ -250,7 +256,12 @@ export async function POST(request: NextRequest) {
         customer_total_orders: customerTotalOrders,
         order_type: orderType,
         estimated_time: estimatedTime,
-        delivery_address: deliveryAddress
+        delivery_address: deliveryAddress,
+        // Campos de agendamento (para dentistas)
+        appointment_date: appointmentDate,
+        appointment_type: appointmentType,
+        doctor_notes: doctorNotes,
+        patient_notes: patientNotes
       }
     })
 

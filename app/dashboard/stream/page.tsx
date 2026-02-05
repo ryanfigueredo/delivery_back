@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { OrderCard } from "@/components/OrderCard";
-import { getSession } from "@/lib/auth-session";
+import { getOrdersLabel } from "@/lib/business-type-helper";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Order {
   id: string;
@@ -27,6 +30,14 @@ export default function DashboardStreamPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Buscar informações do usuário para obter business_type
+  const { data: userData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
+  const user = userData?.user;
+  
+  // Buscar informações do usuário para obter business_type
+  const { data: userData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
+  const user = userData?.user;
 
   useEffect(() => {
     // Usar Server-Sent Events para atualização em tempo real
@@ -83,7 +94,7 @@ export default function DashboardStreamPage() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Dashboard de Pedidos
+            Dashboard de {getOrdersLabel(user)}
           </h1>
           <p className="text-gray-600">
             Atualização em tempo real via Server-Sent Events
@@ -104,7 +115,7 @@ export default function DashboardStreamPage() {
 
         {!isLoading && !error && orders && orders.length === 0 && (
           <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500 text-lg">Nenhum pedido encontrado</p>
+            <p className="text-gray-500 text-lg">Nenhum {getOrdersLabel(user).toLowerCase()} encontrado</p>
           </div>
         )}
 

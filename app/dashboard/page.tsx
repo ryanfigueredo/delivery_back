@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { OrderCard } from "@/components/OrderCard";
+import { getOrdersLabel, getOrdersTodayLabel, getOrderLabel } from "@/lib/business-type-helper";
 import {
   LineChart,
   Line,
@@ -102,9 +103,13 @@ export default function DashboardPage() {
     refreshInterval: 60000,
   });
 
+  // Buscar informações do usuário para obter business_type
+  const { data: userData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
+
   const orders = ordersData?.orders || [];
   const menuStats = menuStatsData?.stats || [];
   const tenants = tenantsData?.tenants || [];
+  const user = userData?.user;
 
   const handleReprint = async (orderId: string) => {
     try {
@@ -177,7 +182,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                    Pedidos Hoje
+                    {getOrdersTodayLabel(user)}
                   </p>
                   <p className="text-3xl font-bold text-gray-900 font-display">
                     {stats.today.orders}
@@ -235,7 +240,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                    Pedidos Semana
+                    {getOrdersLabel(user)} Semana
                   </p>
                   <p className="text-3xl font-bold text-gray-900 font-display">
                     {stats.week.orders}
@@ -313,7 +318,7 @@ export default function DashboardPage() {
             {/* Gráfico de Pedidos por Dia */}
             <div className="card-modern p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 font-display">
-                Pedidos por Dia da Semana
+                {getOrdersLabel(user)} por Dia da Semana
               </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={stats.dailyStats}>
@@ -325,7 +330,7 @@ export default function DashboardPage() {
                   <Bar
                     dataKey="orders"
                     fill="#3b82f6"
-                    name="Pedidos"
+                    name={getOrdersLabel(user)}
                     radius={[8, 8, 0, 0]}
                   />
                 </BarChart>
@@ -415,7 +420,7 @@ export default function DashboardPage() {
             <div className="card-modern p-6 border-l-4 border-accent-500 hover:scale-105 transition-transform duration-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 font-display">
-                  Pedidos Pendentes
+                  {getOrdersLabel(user)} Pendentes
                 </h3>
                 <div className="bg-gradient-to-br from-accent-100 to-accent-50 rounded-xl p-3 shadow-sm">
                   <svg
@@ -556,7 +561,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              Pedidos Recentes
+              {getOrdersLabel(user)} Recentes
             </h2>
             <a
               href="/dashboard/stream"
@@ -576,7 +581,7 @@ export default function DashboardPage() {
             </div>
           ) : orders.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">Nenhum pedido encontrado</p>
+              <p className="text-gray-500 text-lg">Nenhum {getOrdersLabel(user).toLowerCase()} encontrado</p>
             </div>
           ) : (
             <div className="space-y-4">

@@ -26,6 +26,26 @@ export async function POST(request: NextRequest) {
     // Criar sessão
     await createSession(user.id);
 
+    // Buscar informações do tenant para incluir business_type
+    let tenantInfo: any = null
+    if (user.tenant_id) {
+      try {
+        const { prisma } = await import('@/lib/prisma')
+        tenantInfo = await prisma.tenant.findUnique({
+          where: { id: user.tenant_id },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            business_type: true,
+            show_prices_on_bot: true,
+          },
+        })
+      } catch (tenantError) {
+        console.error('Erro ao buscar tenant:', tenantError)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -34,6 +54,10 @@ export async function POST(request: NextRequest) {
         name: user.name,
         role: user.role,
         tenant_id: user.tenant_id,
+        business_type: tenantInfo?.business_type || 'RESTAURANTE',
+        show_prices_on_bot: tenantInfo?.show_prices_on_bot ?? true,
+        tenant_name: tenantInfo?.name,
+        tenant_slug: tenantInfo?.slug,
       },
     });
   } catch (error: unknown) {
