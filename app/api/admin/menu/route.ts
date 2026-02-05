@@ -11,14 +11,32 @@ import {
 // GET - Listar cardápio
 export async function GET(request: NextRequest) {
   // Permitir acesso via sessão (web), API key ou Basic Auth (app)
-  const session = await import("@/lib/auth-session").then((m) =>
-    m.getSession(),
-  );
+  const { getSession } = await import("@/lib/auth-session");
+  const session = await getSession();
   const authValidation = await validateApiKey(request);
-  const { validateBasicAuth } = await import("@/lib/auth");
-  const basicAuth = await validateBasicAuth(request);
+  
+  // Verificar Basic Auth (para apps mobile)
+  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
+  let userFromAuth: any = null;
+  
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.split(" ")[1];
+      const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+      const [username, password] = credentials.split(":");
+      
+      if (username && password) {
+        const { verifyCredentials } = await import("@/lib/auth-session");
+        userFromAuth = await verifyCredentials(username, password);
+      }
+    } catch (error) {
+      // Ignorar erro de parsing
+      console.error("Erro ao processar Basic Auth:", error);
+    }
+  }
 
-  if (!session && !authValidation.isValid && !basicAuth.isValid) {
+  // Verificar se pelo menos uma forma de autenticação é válida
+  if (!session && !authValidation.isValid && !userFromAuth) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
