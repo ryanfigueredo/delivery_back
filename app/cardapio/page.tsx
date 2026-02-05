@@ -485,7 +485,7 @@ export default function CardapioPage() {
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                   item.available
-                                    ? "bg-primary-100 text-primary-800"
+                                    ? "bg-primary-100 text-primary-700"
                                     : "bg-red-100 text-red-800"
                                 }`}
                               >
@@ -524,14 +524,14 @@ export default function CardapioPage() {
                               className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                                 item.available
                                   ? "bg-red-100 text-red-700 hover:bg-red-200"
-                                  : "bg-primary-100 text-primary-700 hover:bg-primary-200"
+                                  : "bg-primary-100 text-primary-600 hover:bg-primary-200"
                               }`}
                             >
                               {item.available ? "Desativar" : "Ativar"}
                             </button>
                             <button
                               onClick={() => handleEdit(item)}
-                              className="p-2 rounded-lg bg-primary-100 text-primary-700 hover:bg-primary-200 transition"
+                              className="p-2 rounded-lg bg-primary-100 text-primary-600 hover:bg-primary-200 transition"
                               title="Editar"
                             >
                               <Pencil size={18} />

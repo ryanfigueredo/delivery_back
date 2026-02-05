@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppIcon } from "@/components/AppIcon";
 import { Check } from "lucide-react";
+import { DeliveryAnimation } from "@/components/DeliveryAnimation";
 
 export default function VendasPage() {
   return (
@@ -32,13 +33,18 @@ export default function VendasPage() {
 
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4 font-display">
-            Planos e Preços
-          </h1>
-          <p className="text-xl text-gray-600">
-            Escolha o plano ideal para o seu negócio
-          </p>
+        <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8">
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-5xl font-bold text-gray-900 mb-4 font-display">
+              Planos e Preços
+            </h1>
+            <p className="text-xl text-gray-600">
+              Escolha o plano ideal para o seu negócio
+            </p>
+          </div>
+          <div className="flex-shrink-0 w-full md:w-96 max-w-md">
+            <DeliveryAnimation className="w-full h-auto" />
+          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -59,6 +65,13 @@ export default function VendasPage() {
                   className="text-primary-500 mr-2 flex-shrink-0"
                 />
                 <span>Bot WhatsApp</span>
+              </li>
+              <li className="flex items-start">
+                <Check
+                  size={18}
+                  className="text-primary-500 mr-2 flex-shrink-0"
+                />
+                <span>1.000 mensagens/mês</span>
               </li>
               <li className="flex items-start">
                 <Check
@@ -105,6 +118,14 @@ export default function VendasPage() {
               <li className="flex items-start">
                 <Check size={18} className="text-white mr-2 flex-shrink-0" />
                 <span className="text-white">Tudo do Básico</span>
+              </li>
+              <li className="flex items-start">
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
+                <span className="text-white">5.000 mensagens/mês</span>
+              </li>
+              <li className="flex items-start">
+                <Check size={18} className="text-white mr-2 flex-shrink-0" />
+                <span className="text-white">500 notas fiscais/mês</span>
               </li>
               <li className="flex items-start">
                 <Check size={18} className="text-white mr-2 flex-shrink-0" />
@@ -185,73 +206,27 @@ export default function VendasPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center font-display">
             Emissão de Nota Fiscal (NF-e)
           </h2>
-          <p className="text-gray-600 text-center mb-8 max-w-2xl mx-auto">
-            Quer emitir nota fiscal? Incluímos no seu plano. Escolha a faixa de
-            notas por mês — o valor é acrescido à mensalidade do plano.
+          <p className="text-gray-600 text-center mb-6 max-w-2xl mx-auto">
+            O plano Completo inclui <strong>500 notas fiscais por mês</strong>. 
+            Se você precisar emitir mais notas fiscais, o valor adicional será cobrado 
+            proporcionalmente.
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full max-w-2xl mx-auto border-collapse">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-3 px-4 font-bold text-gray-900">
-                    Notas Fiscais / mês
-                  </th>
-                  <th className="text-left py-3 px-4 font-bold text-gray-900">
-                    Valor mensal
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-700">
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 500</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 1.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 2.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 3.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 4.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 5.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 10.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 15.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 20.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 25.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-                <tr className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">Até 30.000</td>
-                  <td className="py-3 px-4">Acrescido ao plano</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="bg-primary-50 rounded-xl p-6 max-w-2xl mx-auto">
+            <div className="text-center">
+              <p className="text-lg text-gray-900 mb-2">
+                <strong>Valor adicional:</strong>
+              </p>
+              <p className="text-2xl font-bold text-primary-600 font-display">
+                R$ 0,50 por nota fiscal adicional
+              </p>
+              <p className="text-sm text-gray-700 mt-3">
+                Exemplo: Se emitir 750 notas fiscais no mês, serão cobradas 
+                <strong className="text-gray-900"> 250 notas adicionais × R$ 0,50 = R$ 125,00</strong> além da mensalidade.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-gray-500 text-center mt-4">
-            Valores sob consulta. Entre em contato para incluir emissão de NF-e
-            no seu plano.
+          <p className="text-sm text-gray-500 text-center mt-6">
+            Valores baseados em custos reais de emissão. Entre em contato para mais informações.
           </p>
         </div>
 
@@ -309,9 +284,9 @@ export default function VendasPage() {
                 <div className="text-3xl font-bold text-primary-600 mb-2 font-display">
                   R$ 2.500
                 </div>
-                <p className="text-gray-600">Pagamento único</p>
+                <p className="text-gray-900">Pagamento único</p>
               </div>
-              <p className="text-gray-600">
+              <p className="text-gray-700">
                 Inclui tudo que você precisa para começar. Sem surpresas.
               </p>
             </div>
@@ -330,7 +305,7 @@ export default function VendasPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-20">
+      <footer className="bg-[#4b5563] text-white py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="space-y-2 mb-4">
             <p className="text-gray-400">

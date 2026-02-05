@@ -117,7 +117,7 @@ export function OrderCard({ order, onReprint, onPrint }: OrderCardProps) {
         </p>
         <p className="text-sm text-gray-600 mt-1">{order.customer_phone}</p>
         {order.customer_total_orders && order.customer_total_orders > 0 && (
-          <p className="text-xs text-primary-600 mt-2 font-medium">
+          <p className="text-xs text-gray-700 mt-2 font-medium">
             🎉 {order.customer_total_orders}º pedido deste cliente
           </p>
         )}
@@ -134,7 +134,7 @@ export function OrderCard({ order, onReprint, onPrint }: OrderCardProps) {
               className="flex justify-between items-center bg-white/70 rounded-lg p-3 border border-gray-100 hover:bg-white transition-colors"
             >
               <div className="flex items-center gap-3">
-                <span className="bg-primary-100 text-primary-700 font-bold px-2 py-1 rounded text-sm">
+                <span className="bg-primary-100 text-primary-600 font-bold px-2 py-1 rounded text-sm">
                   {item.quantity}x
                 </span>
                 <span className="text-gray-900 font-medium">{item.name}</span>
@@ -149,7 +149,7 @@ export function OrderCard({ order, onReprint, onPrint }: OrderCardProps) {
 
       <div className="pt-4 border-t-2 border-gray-200">
         <div className="flex justify-between items-center bg-gradient-to-r from-primary-50 to-transparent rounded-lg p-3">
-          <span className="text-lg font-semibold text-gray-700 uppercase tracking-wide">
+          <span className="text-lg font-semibold text-gray-900 uppercase tracking-wide">
             Total
           </span>
           <span className="text-2xl font-bold text-primary-600 font-display">

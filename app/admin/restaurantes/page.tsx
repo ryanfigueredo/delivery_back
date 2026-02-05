@@ -456,7 +456,7 @@ export default function RestaurantesPage() {
                           }
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             tenant.is_active
-                              ? "bg-primary-100 text-primary-800"
+                              ? "bg-primary-100 text-primary-700"
                               : "bg-red-100 text-red-800"
                           }`}
                         >
