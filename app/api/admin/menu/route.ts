@@ -10,13 +10,15 @@ import {
 
 // GET - Listar cardápio
 export async function GET(request: NextRequest) {
-  // Permitir acesso via sessão (web) ou API key (app)
+  // Permitir acesso via sessão (web), API key ou Basic Auth (app)
   const session = await import("@/lib/auth-session").then((m) =>
     m.getSession(),
   );
   const authValidation = await validateApiKey(request);
+  const { validateBasicAuth } = await import("@/lib/auth");
+  const basicAuth = await validateBasicAuth(request);
 
-  if (!session && !authValidation.isValid) {
+  if (!session && !authValidation.isValid && !basicAuth.isValid) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
