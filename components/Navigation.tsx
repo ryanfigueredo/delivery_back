@@ -18,6 +18,7 @@ import {
   X,
   Printer,
   CreditCard,
+  Settings,
 } from "lucide-react";
 import { AppIcon } from "./AppIcon";
 
@@ -211,7 +212,7 @@ export function Navigation() {
                 />
               </button>
               {userMenuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                   <div className="border-b border-gray-100 px-3 py-2">
                     <p className="truncate text-sm font-medium text-gray-900">
                       {user.name}
@@ -220,10 +221,20 @@ export function Navigation() {
                       {isSuperAdmin ? "Super Admin" : user.role}
                     </p>
                   </div>
+                  {!isSuperAdmin && (
+                    <a
+                      href="/dashboard/perfil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Settings size={iconSize} className="text-gray-500" />
+                      <span>Configurações</span>
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     <LogOut size={iconSize} className="text-gray-500" />
                     <span>Sair</span>
