@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { OrderCard } from "@/components/OrderCard";
 import { getOrdersLabel } from "@/lib/business-type-helper";
@@ -27,6 +28,7 @@ interface Order {
 }
 
 export default function DashboardStreamPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +36,13 @@ export default function DashboardStreamPage() {
   // Buscar informações do usuário para obter business_type
   const { data: userData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
   const user = userData?.user;
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    if (userData?.success && userData?.user && !userData.user.tenant_id) {
+      router.push("/admin");
+    }
+  }, [userData, router]);
 
   useEffect(() => {
     // Usar Server-Sent Events para atualização em tempo real

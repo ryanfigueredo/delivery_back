@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface LogEntry {
   id: string;
@@ -13,10 +14,23 @@ interface LogEntry {
 }
 
 export default function LogsImpressoraPage() {
+  const router = useRouter();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user && !data.user.tenant_id) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const fetchLogs = async () => {
     try {

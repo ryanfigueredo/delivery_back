@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import useSWR from "swr";
 import { OrderCard } from "@/components/OrderCard";
 import { getOrdersLabel, getOrdersTodayLabel, getOrderLabel } from "@/lib/business-type-helper";
@@ -60,6 +61,15 @@ interface Stats {
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function DashboardPage() {
+  // Verificar se é super admin e redirecionar
+  const { data: authUserData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
+  
+  useEffect(() => {
+    if (authUserData?.success && authUserData?.user && !authUserData.user.tenant_id) {
+      window.location.href = "/admin";
+    }
+  }, [authUserData]);
+
   const {
     data: statsData,
     error: statsError,

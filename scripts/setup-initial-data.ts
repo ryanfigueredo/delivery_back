@@ -1,8 +1,8 @@
 /**
  * Script para criar dados iniciais:
- * - 2 Tenants (Tamboril Burguer e Restaurante 2)
+ * - 1 Tenant (Tamboril Burguer)
  * - Usuário master (ryan@dmtn.com.br)
- * - Usuários para cada restaurante
+ * - Usuário para Tamboril Burguer
  * 
  * Execute: npx tsx scripts/setup-initial-data.ts
  */
@@ -40,23 +40,7 @@ async function setupInitialData() {
     console.log(`✅ Tenant criado: ${tenant1.name} (ID: ${tenant1.id})`)
     console.log(`   API Key: ${tenant1.api_key}\n`)
 
-    // 2. Criar Tenant 2: Restaurante 2
-    console.log('📦 Criando tenant: Restaurante 2...')
-    const tenant2ApiKey = await generateApiKey()
-    const tenant2 = await prisma.tenant.upsert({
-      where: { slug: 'restaurante-2' },
-      update: {},
-      create: {
-        name: 'Restaurante 2',
-        slug: 'restaurante-2',
-        api_key: tenant2ApiKey,
-        is_active: true,
-      },
-    })
-    console.log(`✅ Tenant criado: ${tenant2.name} (ID: ${tenant2.id})`)
-    console.log(`   API Key: ${tenant2.api_key}\n`)
-
-    // 3. Criar Usuário Master (super admin)
+    // 2. Criar Usuário Master (super admin)
     console.log('👤 Criando usuário master...')
     const existingMaster = await prisma.user.findFirst({
       where: {
@@ -107,28 +91,6 @@ async function setupInitialData() {
     console.log(`✅ Usuário criado: ${user1.username}`)
     console.log(`   Senha: 123456\n`)
 
-    // 5. Criar Usuário para Restaurante 2
-    console.log('👤 Criando usuário para Restaurante 2...')
-    const user2Password = await hashPassword('123456')
-    const user2 = await prisma.user.upsert({
-      where: {
-        tenant_id_username: {
-          tenant_id: tenant2.id,
-          username: 'admin@restaurante2.com'
-        }
-      },
-      update: {},
-      create: {
-        tenant_id: tenant2.id,
-        username: 'admin@restaurante2.com',
-        password: user2Password,
-        name: 'Admin Restaurante 2',
-        role: 'admin',
-      },
-    })
-    console.log(`✅ Usuário criado: ${user2.username}`)
-    console.log(`   Senha: 123456\n`)
-
     console.log('═══════════════════════════════════════')
     console.log('✅ Setup completo!')
     console.log('═══════════════════════════════════════\n')
@@ -144,13 +106,6 @@ async function setupInitialData() {
     console.log(`   Slug: ${tenant1.slug}`)
     console.log(`   API Key: ${tenant1.api_key}`)
     console.log('   Usuário: admin@tamboril.com')
-    console.log('   Senha: 123456\n')
-    
-    console.log('🍽️ RESTAURANTE 2:')
-    console.log(`   Tenant ID: ${tenant2.id}`)
-    console.log(`   Slug: ${tenant2.slug}`)
-    console.log(`   API Key: ${tenant2.api_key}`)
-    console.log('   Usuário: admin@restaurante2.com')
     console.log('   Senha: 123456\n')
 
   } catch (error) {

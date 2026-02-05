@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface StoreStatus {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface TenantProfile {
 }
 
 export default function LojaPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingName, setSavingName] = useState(false);
@@ -28,6 +30,18 @@ export default function LojaPage() {
     lastUpdated: new Date().toISOString(),
   });
   const [nextOpenTime, setNextOpenTime] = useState("");
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user && !data.user.tenant_id) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
   const [customMessage, setCustomMessage] = useState("");
 
   useEffect(() => {

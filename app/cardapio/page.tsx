@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, Pencil } from "lucide-react";
 
 interface MenuItem {
@@ -19,6 +20,7 @@ interface ItemStats {
 }
 
 export default function CardapioPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -39,6 +41,18 @@ export default function CardapioPage() {
     price: "",
     available: true,
   });
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user && !data.user.tenant_id) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   useEffect(() => {
     loadMenu();

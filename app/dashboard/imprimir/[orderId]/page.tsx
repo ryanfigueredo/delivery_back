@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 interface OrderData {
   id: string;
@@ -17,6 +17,7 @@ interface OrderData {
 }
 
 export default function ImprimirPedidoPage() {
+  const router = useRouter();
   const params = useParams();
   const orderId = params?.orderId as string;
   const [order, setOrder] = useState<OrderData | null>(null);
@@ -24,6 +25,18 @@ export default function ImprimirPedidoPage() {
   const [marking, setMarking] = useState(false);
   const [marked, setMarked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user && !data.user.tenant_id) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   useEffect(() => {
     if (!orderId) return;

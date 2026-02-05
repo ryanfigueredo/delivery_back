@@ -114,32 +114,31 @@ export function Navigation() {
     return null;
   }
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/stream", label: "Pedidos", icon: ClipboardList },
-    { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
-    { href: "/loja", label: "Loja", icon: Store },
-    { href: "/dashboard/entregas", label: "Entregas", icon: Truck },
-    { href: "/atendimento", label: "Atendimento", icon: MessageCircle },
-    { href: "/logsimpressora", label: "Logs Impressora", icon: Printer },
-  ];
-
-  if (user && !user.tenant_id) {
-    navItems.push({ href: "/admin", label: "Master", icon: Crown });
-    navItems.push({
-      href: "/admin/restaurantes",
-      label: "Restaurantes",
-      icon: Building2,
-    });
-  }
+  // Se for super admin (sem tenant_id), mostrar apenas links administrativos
+  const isSuperAdmin = user && !user.tenant_id;
+  
+  const navItems = isSuperAdmin
+    ? [
+        { href: "/admin", label: "Master", icon: Crown },
+        { href: "/admin/restaurantes", label: "Restaurantes", icon: Building2 },
+      ]
+    : [
+        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/dashboard/stream", label: "Pedidos", icon: ClipboardList },
+        { href: "/cardapio", label: "Cardápio", icon: UtensilsCrossed },
+        { href: "/loja", label: "Loja", icon: Store },
+        { href: "/dashboard/entregas", label: "Entregas", icon: Truck },
+        { href: "/atendimento", label: "Atendimento", icon: MessageCircle },
+        { href: "/logsimpressora", label: "Logs Impressora", icon: Printer },
+      ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           {/* Logo do tenant acima/esquerda, header mantém Pedidos Express */}
-          <a href="/dashboard" className="flex items-center gap-3">
-            {tenantProfile?.logo_url ? (
+          <a href={isSuperAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-3">
+            {tenantProfile?.logo_url && !isSuperAdmin ? (
               <img
                 src={tenantProfile.logo_url}
                 alt={tenantProfile.name}
@@ -216,7 +215,7 @@ export function Navigation() {
                       {user.name}
                     </p>
                     <p className="truncate text-xs capitalize text-gray-500">
-                      {user.role}
+                      {isSuperAdmin ? "Super Admin" : user.role}
                     </p>
                   </div>
                   <button

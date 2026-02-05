@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface DeliveryConfig {
   restaurantAddress: string;
@@ -11,6 +12,7 @@ interface DeliveryConfig {
 }
 
 export default function EntregasPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<DeliveryConfig>({
@@ -20,6 +22,18 @@ export default function EntregasPage() {
     maxDeliveryKm: 0,
     lastUpdated: "",
   });
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user && !data.user.tenant_id) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   useEffect(() => {
     loadConfig();

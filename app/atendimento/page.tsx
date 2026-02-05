@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { CheckCircle2, MessageCircle } from "lucide-react";
 import { ChatAtendimento } from "@/components/ChatAtendimento";
@@ -20,11 +21,24 @@ const fetcher = (url: string) =>
     .then((data) => data.conversations || []);
 
 export default function AtendimentoPage() {
+  const router = useRouter();
   const previousCountRef = useRef<number>(0);
   const [hasNewConversations, setHasNewConversations] = useState(false);
   const [selectedConv, setSelectedConv] = useState<PriorityConversation | null>(
     null
   );
+
+  // Verificar se é super admin e redirecionar
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user && !data.user.tenant_id) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const {
     data: conversations,
