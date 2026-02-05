@@ -23,12 +23,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar tenant
+    // Buscar tenant com dados completos
     const tenant = await prisma.tenant.findUnique({
       where: { id: authUser.tenant_id },
       select: {
         id: true,
+        name: true,
+        slug: true,
         asaas_subscription_id: true,
+        asaas_customer_id: true,
         plan_type: true,
       },
     });
@@ -40,9 +43,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Se não tem assinatura, redirecionar para criar uma nova (não deve chegar aqui, mas por segurança)
     if (!tenant.asaas_subscription_id) {
       return NextResponse.json(
-        { success: false, error: "Assinatura não encontrada. Crie uma assinatura primeiro." },
+        { 
+          success: false, 
+          error: "Assinatura não encontrada. Por favor, crie uma nova assinatura.",
+          shouldCreateNew: true 
+        },
         { status: 400 }
       );
     }

@@ -131,13 +131,14 @@ export default function PagamentoPage() {
     setLoading(true);
     setError(null);
 
-    // Se já tem assinatura e está mudando de plano, usar endpoint de atualização
-    const isUpdatingPlan = currentSubscription && currentSubscription.planType !== selectedPlan.id;
+    // Verificar se tem assinatura ativa no Asaas para decidir entre criar ou atualizar
+    const hasActiveSubscription = currentSubscription?.asaasSubscriptionId;
 
     try {
       let response;
       
-      if (isUpdatingPlan) {
+      // Se tem assinatura ativa no Asaas E está mudando de plano, usar endpoint de atualização
+      if (hasActiveSubscription && currentSubscription.planType !== selectedPlan.id) {
         // Atualizar plano existente
         response = await fetch("/api/payment/update-plan", {
           method: "POST",
@@ -153,10 +154,25 @@ export default function PagamentoPage() {
           router.push("/dashboard");
           return;
         } else {
-          throw new Error(data.error || "Erro ao atualizar plano");
+          // Se não tem assinatura no Asaas, criar nova ao invés de atualizar
+          if (data.shouldCreateNew || data.error?.includes("Assinatura não encontrada")) {
+            console.log("[Pagamento] Assinatura não encontrada no Asaas, criando nova...");
+            // Continuar para criar nova assinatura
+            response = await fetch("/api/payment/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                planType: selectedPlan.id,
+                paymentMethod,
+                cardData: paymentMethod === "credit_card" ? cardData : undefined,
+              }),
+            });
+          } else {
+            throw new Error(data.error || "Erro ao atualizar plano");
+          }
         }
       } else {
-        // Criar nova assinatura
+        // Criar nova assinatura (primeira vez ou sem assinatura ativa)
         response = await fetch("/api/payment/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
