@@ -500,7 +500,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Restaurantes</h2>
               <a
-                href="/admin/restaurantes"
+                href="/admin/clientes"
                 className="text-blue-600 hover:text-blue-700 font-medium text-sm"
               >
                 Gerenciar todos →

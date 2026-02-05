@@ -46,6 +46,10 @@ export async function GET(request: NextRequest) {
         whatsapp_phone: t.whatsapp_phone,
         bot_configured: t.bot_configured || false,
         bot_last_heartbeat: t.bot_last_heartbeat?.toISOString(),
+        plan_type: t.plan_type || "basic",
+        subscription_payment_date: t.subscription_payment_date?.toISOString() || null,
+        subscription_expires_at: t.subscription_expires_at?.toISOString() || null,
+        subscription_status: t.subscription_status || "active",
         created_at: t.created_at.toISOString(),
         _count: t._count,
       })),
@@ -77,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, business_type, show_prices_on_bot, createUser, username, password, userName } = body;
+    const { name, slug, business_type, show_prices_on_bot, plan_type, createUser, username, password, userName } = body;
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -110,6 +114,8 @@ export async function POST(request: NextRequest) {
         is_active: true,
         business_type: business_type || "RESTAURANTE",
         show_prices_on_bot: show_prices_on_bot !== false,
+        plan_type: plan_type || "basic",
+        subscription_status: "active",
       },
     });
 

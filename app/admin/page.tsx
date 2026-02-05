@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { Building2, ArrowRight } from 'lucide-react'
 
 interface Tenant {
   id: string
@@ -96,24 +97,19 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 font-display">Dashboard Master</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900 font-display mb-2">Dashboard Master</h1>
               <p className="text-sm text-gray-500">Visão geral de todos os clientes</p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-3">
               <Link
-                href="/admin/restaurantes"
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700 transition"
+                href="/admin/clientes"
+                className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md"
               >
-                Gerenciar Restaurantes
-              </Link>
-              <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                ← Voltar
+                <Building2 size={18} />
+                Gerenciar Clientes
               </Link>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { CheckCircle2, Wifi, WifiOff, Settings, Copy } from "lucide-react";
+import { CheckCircle2, Wifi, WifiOff, Settings, Copy, ArrowLeft, Plus, X } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -15,6 +15,10 @@ interface Tenant {
   whatsapp_phone?: string | null;
   bot_configured?: boolean | null;
   bot_last_heartbeat?: string | null;
+  plan_type?: string;
+  subscription_payment_date?: string | null;
+  subscription_expires_at?: string | null;
+  subscription_status?: string | null;
   _count?: {
     orders: number;
     users: number;
@@ -38,7 +42,7 @@ interface User {
   tenant_id: string;
 }
 
-export default function RestaurantesPage() {
+export default function ClientesPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [botStatuses, setBotStatuses] = useState<BotStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +59,7 @@ export default function RestaurantesPage() {
     slug: "",
     business_type: "RESTAURANTE" as "RESTAURANTE" | "DENTISTA",
     show_prices_on_bot: true,
+    plan_type: "basic" as "basic" | "complete" | "premium",
     username: "",
     password: "",
     userName: "",
@@ -107,6 +112,7 @@ export default function RestaurantesPage() {
           slug: formData.slug,
           business_type: formData.business_type,
           show_prices_on_bot: formData.show_prices_on_bot,
+          plan_type: formData.plan_type,
           createUser: showUserForm !== null,
           username: showUserForm ? formData.username : undefined,
           password: showUserForm ? formData.password : undefined,
@@ -155,6 +161,7 @@ export default function RestaurantesPage() {
         slug: "",
         business_type: "RESTAURANTE",
         show_prices_on_bot: true,
+        plan_type: "basic",
         username: "",
         password: "",
         userName: "",
@@ -200,6 +207,7 @@ export default function RestaurantesPage() {
           slug: "",
           business_type: "RESTAURANTE",
           show_prices_on_bot: true,
+          plan_type: "basic",
           username: "",
           password: "",
           userName: "",
@@ -271,6 +279,7 @@ export default function RestaurantesPage() {
           slug: "",
           business_type: "RESTAURANTE",
           show_prices_on_bot: true,
+          plan_type: "basic",
           username: "",
           password: "",
           userName: "",
@@ -296,25 +305,34 @@ export default function RestaurantesPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 font-display">
-                Gerenciar Restaurantes
-              </h1>
-              <p className="text-sm text-gray-500">
-                Criar e gerenciar restaurantes do sistema
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <Link 
+                  href="/admin"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  title="Voltar para Dashboard Master"
+                >
+                  <ArrowLeft size={18} />
+                </Link>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 font-display">
+                    Gerenciar Clientes
+                  </h1>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 ml-12">
+                Criar e gerenciar clientes do sistema (Restaurantes e Clínicas)
               </p>
             </div>
-            <div className="flex gap-4">
-              <Link href="/admin" className="text-gray-600 hover:text-gray-900">
-                ← Voltar
-              </Link>
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCreateForm(!showCreateForm)}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700 transition"
+                className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md"
               >
-                {showCreateForm ? "Cancelar" : "+ Novo Restaurante"}
+                <Plus size={18} />
+                {showCreateForm ? "Cancelar" : "Novo Cliente"}
               </button>
             </div>
           </div>
@@ -332,7 +350,7 @@ export default function RestaurantesPage() {
                     size={22}
                     className="text-green-600 flex-shrink-0"
                   />
-                  Restaurante criado com sucesso!
+                  Cliente criado com sucesso!
                 </h3>
                 <div className="space-y-2 text-sm">
                   <p>
@@ -380,9 +398,10 @@ export default function RestaurantesPage() {
               </div>
               <button
                 onClick={() => setCreatedTenant(null)}
-                className="text-green-600 hover:text-green-800 ml-4"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="Fechar"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
           </div>
@@ -392,12 +411,12 @@ export default function RestaurantesPage() {
         {showCreateForm && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4 font-display">
-              Criar Novo Restaurante
+              Criar Novo Cliente
             </h2>
             <form onSubmit={handleCreateTenant} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome do Restaurante *
+                  Nome do Cliente *
                 </label>
                 <input
                   type="text"
@@ -407,7 +426,7 @@ export default function RestaurantesPage() {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Ex: Pizzaria do João"
+                  placeholder={formData.business_type === "DENTISTA" ? "Ex: Clínica Dental XYZ" : "Ex: Pizzaria do João"}
                 />
               </div>
 
@@ -428,7 +447,7 @@ export default function RestaurantesPage() {
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Ex: pizzaria-do-joao"
+                  placeholder={formData.business_type === "DENTISTA" ? "Ex: clinica-dental-xyz" : "Ex: pizzaria-do-joao"}
                 />
                 <p className="mt-1 text-sm text-gray-500">
                   Apenas letras minúsculas, números e hífens
@@ -483,6 +502,30 @@ export default function RestaurantesPage() {
                   </p>
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Plano *
+                </label>
+                <select
+                  required
+                  value={formData.plan_type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      plan_type: e.target.value as "basic" | "complete" | "premium",
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="basic">Básico (1.000 mensagens/mês)</option>
+                  <option value="complete">Completo (5.000 mensagens/mês)</option>
+                  <option value="premium">Premium (Ilimitado)</option>
+                </select>
+                <p className="mt-1 text-sm text-gray-500">
+                  Define o limite de mensagens e recursos disponíveis
+                </p>
+              </div>
 
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-center mb-4">
@@ -698,7 +741,7 @@ export default function RestaurantesPage() {
                   type="submit"
                   className="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition"
                 >
-                  Criar Restaurante
+                  Criar Cliente
                 </button>
                 <button
                   type="button"
@@ -710,6 +753,7 @@ export default function RestaurantesPage() {
                       slug: "",
                       business_type: "RESTAURANTE",
                       show_prices_on_bot: true,
+                      plan_type: "basic",
                       username: "",
                       password: "",
                       userName: "",
@@ -731,66 +775,70 @@ export default function RestaurantesPage() {
           </div>
         )}
 
-        {/* Lista de Restaurantes */}
+        {/* Lista de Clientes */}
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
             <p className="mt-4 text-gray-600">Carregando...</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-xl font-bold text-gray-900 font-display">
-                Restaurantes Cadastrados
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Nome
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Slug
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Bot WhatsApp
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Pedidos
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Usuários
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Criado em
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {tenants.map((tenant) => {
+          <>
+            {/* Seção de Restaurantes */}
+            {tenants.filter(t => !t.business_type || t.business_type === "RESTAURANTE").length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div className="px-6 py-4 border-b bg-gradient-to-r from-orange-50 to-orange-100/50">
+                  <h2 className="text-xl font-bold text-gray-900 font-display flex items-center gap-2">
+                    <span className="text-2xl">🍔</span> 
+                    <span>Restaurantes</span>
+                    <span className="ml-2 px-2.5 py-0.5 bg-orange-200 text-orange-800 text-sm font-semibold rounded-full">
+                      {tenants.filter(t => !t.business_type || t.business_type === "RESTAURANTE").length}
+                    </span>
+                  </h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Nome
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Slug
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Bot WhatsApp
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Plano
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Último Pagamento
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Pedidos
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Usuários
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Criado em
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {tenants.filter(t => !t.business_type || t.business_type === "RESTAURANTE").map((tenant) => {
                     const botStatus = botStatuses.find(b => b.tenant_id === tenant.id);
                     const isBotOnline = botStatus?.is_online || false;
                     return (
                       <tr key={tenant.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                           {tenant.name}
-                          {tenant.business_type && (
-                            <span className={`ml-2 px-2 py-0.5 rounded text-xs font-semibold ${
-                              tenant.business_type === "DENTISTA" 
-                                ? "bg-blue-100 text-blue-700" 
-                                : "bg-orange-100 text-orange-700"
-                            }`}>
-                              {tenant.business_type === "DENTISTA" ? "🦷 Dentista" : "🍔 Restaurante"}
-                            </span>
-                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                           <code className="text-xs bg-gray-100 px-2 py-1 rounded">{tenant.slug}</code>
@@ -834,6 +882,23 @@ export default function RestaurantesPage() {
                               <span className="text-xs text-gray-400">Não configurado</span>
                             )}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            tenant.plan_type === "premium" 
+                              ? "bg-purple-100 text-purple-700"
+                              : tenant.plan_type === "complete"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}>
+                            {tenant.plan_type === "premium" ? "Premium" : tenant.plan_type === "complete" ? "Completo" : "Básico"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
+                          {tenant.subscription_payment_date 
+                            ? new Date(tenant.subscription_payment_date).toLocaleDateString("pt-BR")
+                            : <span className="text-gray-400">—</span>
+                          }
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                           {tenant._count?.orders || 0}
@@ -904,10 +969,197 @@ export default function RestaurantesPage() {
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Seção de Clínicas/Dentistas */}
+            {tenants.filter(t => t.business_type === "DENTISTA").length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-blue-100/50">
+                  <h2 className="text-xl font-bold text-gray-900 font-display flex items-center gap-2">
+                    <span className="text-2xl">🦷</span> 
+                    <span>Clínicas</span>
+                    <span className="ml-2 px-2.5 py-0.5 bg-blue-200 text-blue-800 text-sm font-semibold rounded-full">
+                      {tenants.filter(t => t.business_type === "DENTISTA").length}
+                    </span>
+                  </h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Nome
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Slug
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Bot WhatsApp
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Plano
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Último Pagamento
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Agendamentos
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Usuários
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Criado em
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {tenants.filter(t => t.business_type === "DENTISTA").map((tenant) => {
+                        const botStatus = botStatuses.find(b => b.tenant_id === tenant.id);
+                        const isBotOnline = botStatus?.is_online || false;
+                        return (
+                          <tr key={tenant.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                              {tenant.name}
+                              <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700">
+                                🦷 Dentista
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                              <code className="text-xs bg-gray-100 px-2 py-1 rounded">{tenant.slug}</code>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button
+                                onClick={() =>
+                                  toggleTenantStatus(tenant.id, tenant.is_active)
+                                }
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  tenant.is_active
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {tenant.is_active ? "Ativo" : "Inativo"}
+                              </button>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col gap-1">
+                                {tenant.bot_configured ? (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${isBotOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                      <span className={`text-xs font-medium ${isBotOnline ? 'text-green-600' : 'text-red-600'}`}>
+                                        {isBotOnline ? 'Online' : 'Offline'}
+                                      </span>
+                                    </div>
+                                    {botStatus && (
+                                      <span className="text-xs text-gray-500">
+                                        {botStatus.total_orders_today} agendamentos hoje
+                                      </span>
+                                    )}
+                                    {tenant.whatsapp_phone && (
+                                      <span className="text-xs text-gray-400 font-mono">
+                                        {tenant.whatsapp_phone}
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-gray-400">Não configurado</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                              {tenant._count?.orders || 0}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                              {tenant._count?.users || 0}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
+                              {new Date(tenant.created_at).toLocaleDateString("pt-BR")}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  onClick={() => {
+                                    const currentTenant = tenants.find((t) => t.id === tenant.id);
+                                    if (showWhatsAppForm === tenant.id) {
+                                      setShowWhatsAppForm(null);
+                                    } else {
+                                      setShowWhatsAppForm(tenant.id);
+                                      setFormData({
+                                        ...formData,
+                                        whatsapp_phone: currentTenant?.whatsapp_phone || "",
+                                        meta_phone_number_id: "",
+                                        meta_access_token: "",
+                                        meta_verify_token: "",
+                                      });
+                                    }
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1"
+                                  title="Configurar WhatsApp"
+                                >
+                                  <Settings size={14} />
+                                  WhatsApp
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setShowUserForm(
+                                      showUserForm === tenant.id ? null : tenant.id
+                                    )
+                                  }
+                                  className="text-amber-600 hover:text-amber-800 text-xs font-medium"
+                                >
+                                  {showUserForm === tenant.id ? "Cancelar" : "+ Usuário"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Tem certeza que deseja ${
+                                          tenant.is_active ? "desativar" : "ativar"
+                                        } ${tenant.name}?`
+                                      )
+                                    ) {
+                                      toggleTenantStatus(tenant.id, tenant.is_active);
+                                    }
+                                  }}
+                                  className={`text-xs font-medium ${
+                                    tenant.is_active
+                                      ? "text-red-600 hover:text-red-800"
+                                      : "text-green-600 hover:text-green-800"
+                                  }`}
+                                >
+                                  {tenant.is_active ? "Desativar" : "Ativar"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Mensagem quando não há clientes */}
+            {tenants.length === 0 && !loading && (
+              <div className="bg-white rounded-lg shadow p-12 text-center">
+                <p className="text-gray-500 text-lg">Nenhum cliente cadastrado ainda.</p>
+                <p className="text-gray-400 text-sm mt-2">Clique em "+ Novo Cliente" para começar.</p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Formulário de Criar Usuário para Tenant Existente */}
@@ -926,6 +1178,7 @@ export default function RestaurantesPage() {
                     slug: "",
                     business_type: "RESTAURANTE",
                     show_prices_on_bot: true,
+                    plan_type: "basic",
                     username: "",
                     password: "",
                     userName: "",
@@ -1013,6 +1266,7 @@ export default function RestaurantesPage() {
                       slug: "",
                       business_type: "RESTAURANTE",
                       show_prices_on_bot: true,
+                      plan_type: "basic",
                       username: "",
                       password: "",
                       userName: "",

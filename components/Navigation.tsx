@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Printer,
+  CreditCard,
 } from "lucide-react";
 import { AppIcon } from "./AppIcon";
 
@@ -120,7 +121,7 @@ export function Navigation() {
   const navItems = isSuperAdmin
     ? [
         { href: "/admin", label: "Master", icon: Crown },
-        { href: "/admin/restaurantes", label: "Restaurantes", icon: Building2 },
+        { href: "/admin/clientes", label: "Clientes", icon: Building2 },
       ]
     : [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -129,6 +130,7 @@ export function Navigation() {
         { href: "/loja", label: "Loja", icon: Store },
         { href: "/dashboard/entregas", label: "Entregas", icon: Truck },
         { href: "/atendimento", label: "Atendimento", icon: MessageCircle },
+        { href: "/dashboard/pagamento", label: "Assinatura", icon: CreditCard },
         { href: "/logsimpressora", label: "Logs Impressora", icon: Printer },
       ];
 
