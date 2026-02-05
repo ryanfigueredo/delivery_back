@@ -139,20 +139,35 @@ export default function PagamentoPage() {
       
       // Se tem assinatura ativa no Asaas E está mudando de plano, usar endpoint de atualização
       if (hasActiveSubscription && currentSubscription.planType !== selectedPlan.id) {
-        // Atualizar plano existente
+        // Atualizar plano existente COM PAGAMENTO
         response = await fetch("/api/payment/update-plan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             planType: selectedPlan.id,
+            paymentMethod,
+            cardData: paymentMethod === "credit_card" ? cardData : undefined,
           }),
         });
 
         const data = await response.json();
         if (data.success) {
-          alert("✅ Plano atualizado com sucesso! A mudança será aplicada no próximo ciclo de cobrança.");
-          router.push("/dashboard");
-          return;
+          // Se for PIX, mostrar QR Code
+          if (paymentMethod === "pix" && data.pixQrCode) {
+            router.push(`/dashboard/pagamento/confirmacao?payment_id=${data.paymentId}&method=pix&plan_update=true`);
+            return;
+          } else if (paymentMethod === "credit_card" && data.paymentId) {
+            router.push(`/dashboard/pagamento/confirmacao?payment_id=${data.paymentId}&method=card&plan_update=true`);
+            return;
+          } else if (data.requiresPayment) {
+            // Se precisa de pagamento mas não foi fornecido método
+            throw new Error("Selecione um método de pagamento para atualizar o plano");
+          } else {
+            // Downgrade ou mesmo valor - apenas atualizado
+            alert("✅ Plano atualizado com sucesso!");
+            router.push("/dashboard");
+            return;
+          }
         } else {
           // Se não tem assinatura no Asaas, criar nova ao invés de atualizar
           if (data.shouldCreateNew || data.error?.includes("Assinatura não encontrada")) {
@@ -197,18 +212,24 @@ export default function PagamentoPage() {
 
       // Se for PIX, mostrar QR Code
       if (paymentMethod === "pix") {
-        if (data.pixQrCode && data.paymentId) {
-          // Redirecionar para página de confirmação PIX
+        if (data.paymentId) {
+          // Sempre redirecionar com payment_id quando disponível
           router.push(`/dashboard/pagamento/confirmacao?payment_id=${data.paymentId}&method=pix`);
         } else if (data.subscriptionId) {
-          // Pagamento ainda sendo processado, redirecionar mesmo assim
+          // Fallback: usar subscription_id se payment_id não estiver disponível
           router.push(`/dashboard/pagamento/confirmacao?subscription_id=${data.subscriptionId}&method=pix`);
         } else {
           throw new Error(data.note || "Erro ao gerar QR Code. Tente novamente.");
         }
-      } else if (paymentMethod === "credit_card" && data.subscriptionId) {
+      } else if (paymentMethod === "credit_card") {
         // Pagamento com cartão processado
-        router.push(`/dashboard/pagamento/confirmacao?subscription_id=${data.subscriptionId}&method=card`);
+        if (data.paymentId) {
+          router.push(`/dashboard/pagamento/confirmacao?payment_id=${data.paymentId}&method=card`);
+        } else if (data.subscriptionId) {
+          router.push(`/dashboard/pagamento/confirmacao?subscription_id=${data.subscriptionId}&method=card`);
+        } else {
+          throw new Error("Erro ao processar pagamento com cartão");
+        }
       } else {
         throw new Error("Resposta inválida do servidor");
       }

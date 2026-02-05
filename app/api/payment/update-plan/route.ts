@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { updateAsaasSubscription, PLAN_PRICES } from "@/lib/asaas";
+import { updateAsaasSubscription, createAsaasPayment, getAsaasPaymentPixQrCode, PLAN_PRICES } from "@/lib/asaas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { planType } = body;
+    const { planType, paymentMethod, cardData } = body;
 
     if (!planType || !["basic", "complete", "premium"].includes(planType)) {
       return NextResponse.json(
@@ -33,6 +33,11 @@ export async function POST(request: NextRequest) {
         asaas_subscription_id: true,
         asaas_customer_id: true,
         plan_type: true,
+        customer_cpf_cnpj: true,
+        customer_postal_code: true,
+        customer_address_number: true,
+        customer_address_complement: true,
+        customer_phone: true,
       },
     });
 
@@ -64,31 +69,167 @@ export async function POST(request: NextRequest) {
     }
 
     const newValue = PLAN_PRICES[planType as keyof typeof PLAN_PRICES];
+    const currentValue = PLAN_PRICES[tenant.plan_type as keyof typeof PLAN_PRICES] || 0;
+    
+    // Calcular diferença a pagar (se upgrade, cobrar diferença; se downgrade, pode ser pró-rata ou diferença)
+    const amountToPay = Math.max(0, newValue - currentValue);
+    
+    // Se não precisa pagar nada (downgrade ou mesmo valor), apenas atualizar
+    if (amountToPay === 0) {
+      const updatedSubscription = await updateAsaasSubscription(
+        tenant.asaas_subscription_id,
+        {
+          value: newValue,
+          description: `Assinatura ${planType} - Pedidos Express`,
+        }
+      );
 
-    // Atualizar assinatura no Asaas
-    const updatedSubscription = await updateAsaasSubscription(
-      tenant.asaas_subscription_id,
-      {
-        value: newValue,
-        description: `Assinatura ${planType} - Pedidos Express`,
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: {
+          plan_type: planType,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Plano atualizado com sucesso",
+        planType,
+        newValue,
+      });
+    }
+
+    // Se precisa pagar, requer método de pagamento
+    if (!paymentMethod) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Método de pagamento é obrigatório para atualizar o plano",
+          requiresPayment: true,
+          amountToPay,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Buscar usuário para email
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: { username: true },
+    });
+
+    // Calcular data de vencimento (hoje)
+    const dueDate = new Date();
+    const dueDateStr = dueDate.toISOString().split("T")[0];
+
+    // Criar pagamento imediato para diferença do plano
+    if (paymentMethod === "pix") {
+      // Criar pagamento PIX
+      const payment = await createAsaasPayment({
+        customer: tenant.asaas_customer_id!,
+        billingType: "PIX",
+        value: amountToPay,
+        dueDate: dueDateStr,
+        description: `Upgrade de plano - Assinatura ${planType} - Pedidos Express`,
+        subscription: tenant.asaas_subscription_id!,
+        externalReference: tenant.id,
+      });
+
+      // Buscar QR Code
+      try {
+        const qrCodeData = await getAsaasPaymentPixQrCode(payment.id);
+        
+        // Atualizar assinatura no Asaas (mas não ativar plano ainda - só após pagamento confirmado)
+        await updateAsaasSubscription(
+          tenant.asaas_subscription_id,
+          {
+            value: newValue,
+            description: `Assinatura ${planType} - Pedidos Express`,
+          }
+        );
+
+        return NextResponse.json({
+          success: true,
+          paymentId: payment.id,
+          subscriptionId: tenant.asaas_subscription_id,
+          pixQrCode: qrCodeData.payload,
+          pixQrCodeBase64: qrCodeData.encodedImage,
+          pixCopiaECola: qrCodeData.payload,
+          paymentValue: amountToPay,
+          dueDate: payment.dueDate,
+          planType,
+          message: "Pagamento gerado. Após confirmação, o plano será atualizado.",
+        });
+      } catch (qrError: any) {
+        console.error("[Update Plan] Erro ao buscar QR Code:", qrError);
+        return NextResponse.json({
+          success: true,
+          paymentId: payment.id,
+          subscriptionId: tenant.asaas_subscription_id,
+          paymentValue: amountToPay,
+          planType,
+          note: "Pagamento criado, aguarde alguns segundos e recarregue para ver o QR Code",
+        });
       }
-    );
+    } else if (paymentMethod === "credit_card" && cardData) {
+      // Criar pagamento com cartão
+      const cpfCnpjCleaned = tenant.customer_cpf_cnpj?.replace(/\D/g, "") || "";
+      
+      const payment = await createAsaasPayment({
+        customer: tenant.asaas_customer_id!,
+        billingType: "CREDIT_CARD",
+        value: amountToPay,
+        dueDate: dueDateStr,
+        description: `Upgrade de plano - Assinatura ${planType} - Pedidos Express`,
+        subscription: tenant.asaas_subscription_id!,
+        externalReference: tenant.id,
+        creditCard: {
+          holderName: cardData.holderName,
+          number: cardData.number.replace(/\s/g, ""),
+          expiryMonth: cardData.expiryMonth.padStart(2, "0"),
+          expiryYear: cardData.expiryYear,
+          ccv: cardData.ccv,
+        },
+        creditCardHolderInfo: {
+          name: cardData.holderName,
+          email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,
+          cpfCnpj: cpfCnpjCleaned,
+          postalCode: tenant.customer_postal_code?.replace(/\D/g, "") || "",
+          addressNumber: tenant.customer_address_number || "",
+          addressComplement: tenant.customer_address_complement || undefined,
+          phone: tenant.customer_phone?.replace(/\D/g, "") || "",
+        },
+      });
 
-    // Atualizar tenant no banco
-    await prisma.tenant.update({
-      where: { id: tenant.id },
-      data: {
-        plan_type: planType,
-        subscription_status: "active",
-      },
-    });
+      // Atualizar assinatura no Asaas
+      await updateAsaasSubscription(
+        tenant.asaas_subscription_id,
+        {
+          value: newValue,
+          description: `Assinatura ${planType} - Pedidos Express`,
+        }
+      );
 
-    return NextResponse.json({
-      success: true,
-      message: "Plano atualizado com sucesso",
-      planType,
-      newValue,
-    });
+      // Se pagamento com cartão, pode ser processado imediatamente
+      // O webhook PAYMENT_CONFIRMED vai atualizar o plano
+      return NextResponse.json({
+        success: true,
+        paymentId: payment.id,
+        subscriptionId: tenant.asaas_subscription_id,
+        paymentValue: amountToPay,
+        planType,
+        status: payment.status,
+        message: "Pagamento processado. O plano será atualizado após confirmação.",
+      });
+    } else {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Dados do cartão são obrigatórios para pagamento com cartão de crédito" 
+        },
+        { status: 400 }
+      );
+    }
   } catch (error: any) {
     console.error("[Update Plan] Erro:", error);
     return NextResponse.json(

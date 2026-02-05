@@ -313,7 +313,7 @@ export async function cancelAsaasSubscription(
 }
 
 /**
- * Cria um pagamento manualmente (útil para primeiro pagamento de assinatura PIX)
+ * Cria um pagamento manualmente (útil para primeiro pagamento de assinatura PIX ou upgrade de plano)
  */
 export async function createAsaasPayment(paymentData: {
   customer: string;
@@ -323,6 +323,22 @@ export async function createAsaasPayment(paymentData: {
   description?: string;
   subscription?: string;
   externalReference?: string;
+  creditCard?: {
+    holderName: string;
+    number: string;
+    expiryMonth: string;
+    expiryYear: string;
+    ccv: string;
+  };
+  creditCardHolderInfo?: {
+    name: string;
+    email: string;
+    cpfCnpj: string;
+    postalCode: string;
+    addressNumber: string;
+    addressComplement?: string;
+    phone: string;
+  };
 }): Promise<any> {
   if (!ASAAS_API_KEY) {
     throw new Error('ASAAS_API_KEY não configurada');

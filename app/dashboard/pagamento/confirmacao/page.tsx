@@ -23,22 +23,30 @@ function ConfirmacaoPagamentoPageContent() {
       return;
     }
 
-    // Buscar dados do pagamento
-    fetch(`/api/payment/status?${paymentId ? `payment_id=${paymentId}` : `subscription_id=${subscriptionId}`}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setPaymentData(data.payment);
-        } else {
-          setError(data.error || "Erro ao buscar dados do pagamento");
-        }
-      })
-      .catch((err) => {
-        setError("Erro ao buscar dados do pagamento");
-        console.error(err);
-      })
-      .finally(() => setLoading(false));
-  }, [paymentId, subscriptionId]);
+    // Função para buscar dados do pagamento
+    const fetchPaymentData = () => {
+      fetch(`/api/payment/status?${paymentId ? `payment_id=${paymentId}` : `subscription_id=${subscriptionId}`}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setPaymentData(data.payment);
+            // Se for PIX e não tiver QR Code ainda, tentar novamente após 3 segundos
+            if (method === "pix" && !data.payment.pixQrCodeBase64 && !data.payment.pixCopiaECola) {
+              setTimeout(fetchPaymentData, 3000);
+            }
+          } else {
+            setError(data.error || "Erro ao buscar dados do pagamento");
+          }
+        })
+        .catch((err) => {
+          setError("Erro ao buscar dados do pagamento");
+          console.error(err);
+        })
+        .finally(() => setLoading(false));
+    };
+
+    fetchPaymentData();
+  }, [paymentId, subscriptionId, method]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -136,7 +144,7 @@ function ConfirmacaoPagamentoPageContent() {
             </div>
 
             {/* QR Code */}
-            {paymentData.pixQrCodeBase64 && (
+            {paymentData.pixQrCodeBase64 ? (
               <div className="bg-white p-6 rounded-lg border-2 border-gray-200 mb-6 flex justify-center">
                 <img
                   src={`data:image/png;base64,${paymentData.pixQrCodeBase64}`}
@@ -144,10 +152,22 @@ function ConfirmacaoPagamentoPageContent() {
                   className="w-64 h-64"
                 />
               </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-800">
+                  QR Code sendo gerado... Aguarde alguns segundos e recarregue a página.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 text-sm text-yellow-900 underline"
+                >
+                  Recarregar página
+                </button>
+              </div>
             )}
 
             {/* Código PIX */}
-            {paymentData.pixCopiaECola && (
+            {(paymentData.pixCopiaECola || paymentData.pixQrCode) && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Código PIX (Copiar e Colar)
@@ -156,11 +176,11 @@ function ConfirmacaoPagamentoPageContent() {
                   <input
                     type="text"
                     readOnly
-                    value={paymentData.pixCopiaECola}
+                    value={paymentData.pixCopiaECola || paymentData.pixQrCode || ""}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
                   />
                   <button
-                    onClick={() => copyToClipboard(paymentData.pixCopiaECola)}
+                    onClick={() => copyToClipboard(paymentData.pixCopiaECola || paymentData.pixQrCode || "")}
                     className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center gap-2"
                   >
                     {copied ? (
