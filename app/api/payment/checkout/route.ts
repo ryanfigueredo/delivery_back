@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createAsaasCustomer, createAsaasSubscription, PLAN_PRICES } from "@/lib/asaas";
+import { createAsaasCustomer, createAsaasSubscription, getAsaasCustomer, updateAsaasCustomer, PLAN_PRICES } from "@/lib/asaas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,13 +70,12 @@ export async function POST(request: NextRequest) {
       select: { username: true },
     });
 
-    // Criar ou buscar cliente no Asaas
+    // Criar ou atualizar cliente no Asaas
     let customerId = tenant.asaas_customer_id;
+    const cpfCnpjCleaned = tenant.customer_cpf_cnpj.replace(/\D/g, "");
 
     if (!customerId) {
       // Criar cliente no Asaas com dados completos
-      const cpfCnpjCleaned = tenant.customer_cpf_cnpj.replace(/\D/g, "");
-      
       const asaasCustomer = await createAsaasCustomer({
         name: tenant.name,
         email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,
@@ -99,6 +98,59 @@ export async function POST(request: NextRequest) {
         where: { id: tenant.id },
         data: { asaas_customer_id: customerId },
       });
+    } else {
+      // Cliente já existe - verificar se tem CPF/CNPJ e atualizar se necessário
+      try {
+        const existingCustomer = await getAsaasCustomer(customerId);
+        
+        // Se não tem CPF/CNPJ no Asaas, atualizar com os dados completos
+        if (!existingCustomer.cpfCnpj || existingCustomer.cpfCnpj.replace(/\D/g, "") !== cpfCnpjCleaned) {
+          console.log("[Payment Checkout] Atualizando cliente no Asaas com dados completos...");
+          
+          await updateAsaasCustomer(customerId, {
+            name: tenant.name,
+            email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,
+            cpfCnpj: cpfCnpjCleaned,
+            phone: tenant.customer_phone || undefined,
+            mobilePhone: tenant.customer_phone || undefined,
+            postalCode: tenant.customer_postal_code?.replace(/\D/g, "") || undefined,
+            address: tenant.customer_address || undefined,
+            addressNumber: tenant.customer_address_number || undefined,
+            complement: tenant.customer_address_complement || undefined,
+            province: tenant.customer_province || undefined,
+            city: tenant.customer_city || undefined,
+            state: tenant.customer_state || undefined,
+          });
+          
+          console.log("[Payment Checkout] Cliente atualizado com sucesso no Asaas");
+        }
+      } catch (error: any) {
+        // Se der erro ao buscar cliente (pode não existir mais), criar um novo
+        console.warn("[Payment Checkout] Erro ao buscar cliente existente, criando novo:", error.message);
+        
+        const asaasCustomer = await createAsaasCustomer({
+          name: tenant.name,
+          email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,
+          cpfCnpj: cpfCnpjCleaned,
+          phone: tenant.customer_phone || undefined,
+          mobilePhone: tenant.customer_phone || undefined,
+          postalCode: tenant.customer_postal_code?.replace(/\D/g, "") || undefined,
+          address: tenant.customer_address || undefined,
+          addressNumber: tenant.customer_address_number || undefined,
+          complement: tenant.customer_address_complement || undefined,
+          province: tenant.customer_province || undefined,
+          city: tenant.customer_city || undefined,
+          state: tenant.customer_state || undefined,
+        });
+
+        customerId = asaasCustomer.id;
+
+        // Atualizar customer_id no tenant
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: { asaas_customer_id: customerId },
+        });
+      }
     }
 
     // Calcular data de vencimento (30 dias a partir de hoje)

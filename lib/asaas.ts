@@ -143,6 +143,34 @@ export async function getAsaasCustomer(
 }
 
 /**
+ * Atualiza um cliente no Asaas
+ */
+export async function updateAsaasCustomer(
+  customerId: string,
+  customerData: Partial<AsaasCustomer>
+): Promise<{ id: string; [key: string]: any }> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
+  const response = await fetch(`${ASAAS_API_URL}/customers/${customerId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: ASAAS_API_KEY,
+    },
+    body: JSON.stringify(customerData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Erro ao atualizar cliente no Asaas: ${JSON.stringify(error)}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Cria uma assinatura no Asaas
  */
 export async function createAsaasSubscription(
