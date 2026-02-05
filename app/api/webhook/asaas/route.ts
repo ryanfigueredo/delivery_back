@@ -148,6 +148,24 @@ export async function POST(request: NextRequest) {
         console.log(`[Asaas Webhook] Assinatura inativada para tenant: ${tenant.id}`);
         break;
 
+      case "SUBSCRIPTION_CREATED":
+        // Assinatura criada - atualizar status
+        if (subscription) {
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: {
+              asaas_subscription_id: subscription.id,
+              subscription_status: subscription.status === "ACTIVE" ? "active" : "pending",
+              plan_type: tenant.plan_type || "basic",
+              subscription_expires_at: subscription.nextDueDate
+                ? new Date(subscription.nextDueDate)
+                : null,
+            },
+          });
+          console.log(`[Asaas Webhook] Assinatura criada para tenant: ${tenant.id}, status: ${subscription.status}`);
+        }
+        break;
+
       default:
         console.log(`[Asaas Webhook] Evento não tratado: ${event}`);
     }

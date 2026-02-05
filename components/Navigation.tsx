@@ -16,8 +16,6 @@ import {
   ClipboardList,
   Menu,
   X,
-  Printer,
-  CreditCard,
   Settings,
 } from "lucide-react";
 import { AppIcon } from "./AppIcon";
@@ -131,8 +129,6 @@ export function Navigation() {
         { href: "/loja", label: "Loja", icon: Store },
         { href: "/dashboard/entregas", label: "Entregas", icon: Truck },
         { href: "/atendimento", label: "Atendimento", icon: MessageCircle },
-        { href: "/dashboard/pagamento", label: "Assinatura", icon: CreditCard },
-        { href: "/logsimpressora", label: "Logs Impressora", icon: Printer },
       ];
 
   return (

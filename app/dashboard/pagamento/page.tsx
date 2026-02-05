@@ -196,15 +196,25 @@ export default function PagamentoPage() {
       }
 
       // Se for PIX, mostrar QR Code
-      if (paymentMethod === "pix" && data.pixQrCode) {
-        // Redirecionar para página de confirmação PIX
-        router.push(`/dashboard/pagamento/confirmacao?payment_id=${data.paymentId}&method=pix`);
+      if (paymentMethod === "pix") {
+        if (data.pixQrCode && data.paymentId) {
+          // Redirecionar para página de confirmação PIX
+          router.push(`/dashboard/pagamento/confirmacao?payment_id=${data.paymentId}&method=pix`);
+        } else if (data.subscriptionId) {
+          // Pagamento ainda sendo processado, redirecionar mesmo assim
+          router.push(`/dashboard/pagamento/confirmacao?subscription_id=${data.subscriptionId}&method=pix`);
+        } else {
+          throw new Error(data.note || "Erro ao gerar QR Code. Tente novamente.");
+        }
       } else if (paymentMethod === "credit_card" && data.subscriptionId) {
         // Pagamento com cartão processado
         router.push(`/dashboard/pagamento/confirmacao?subscription_id=${data.subscriptionId}&method=card`);
+      } else {
+        throw new Error("Resposta inválida do servidor");
       }
     } catch (err: any) {
       setError(err.message || "Erro ao processar pagamento. Tente novamente.");
+    } finally {
       setLoading(false);
     }
   };

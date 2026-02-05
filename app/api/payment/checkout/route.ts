@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createAsaasCustomer, createAsaasSubscription, getAsaasCustomer, updateAsaasCustomer, PLAN_PRICES } from "@/lib/asaas";
+import { createAsaasCustomer, createAsaasSubscription, getAsaasCustomer, updateAsaasCustomer, createAsaasPayment, getAsaasPaymentPixQrCode, PLAN_PRICES } from "@/lib/asaas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -204,47 +204,58 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Se for PIX, buscar primeiro pagamento para obter QR Code
+    // Se for PIX, criar primeiro pagamento manualmente e obter QR Code
     if (paymentMethod === "pix") {
       try {
-        const paymentsResponse = await fetch(
-          `${process.env.ASAAS_API_URL || "https://www.asaas.com/api/v3"}/subscriptions/${asaasSubscription.id}/payments?limit=1`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              access_token: process.env.ASAAS_API_KEY || "",
-            },
-          }
-        );
+        // Criar primeiro pagamento manualmente
+        const firstPayment = await createAsaasPayment({
+          customer: customerId,
+          billingType: "PIX",
+          value: PLAN_PRICES[planType as keyof typeof PLAN_PRICES],
+          dueDate: nextDueDateStr,
+          description: `Primeiro pagamento - Assinatura ${planType} - Pedidos Express`,
+          subscription: asaasSubscription.id,
+          externalReference: tenant.id,
+        });
 
-        if (paymentsResponse.ok) {
-          const paymentsData = await paymentsResponse.json();
-          const firstPayment = paymentsData.data?.[0];
+        console.log("[Payment Checkout] Primeiro pagamento PIX criado:", firstPayment.id);
 
-          if (firstPayment) {
-            return NextResponse.json({
-              success: true,
-              paymentId: firstPayment.id,
-              subscriptionId: asaasSubscription.id,
-              pixQrCode: firstPayment.pixQrCode,
-              pixQrCodeBase64: firstPayment.pixQrCodeBase64,
-              pixCopiaECola: firstPayment.pixCopiaECola,
-              paymentValue: PLAN_PRICES[planType as keyof typeof PLAN_PRICES],
-              dueDate: firstPayment.dueDate,
-            });
-          }
+        // Buscar QR Code do pagamento
+        try {
+          const qrCodeData = await getAsaasPaymentPixQrCode(firstPayment.id);
+          
+          return NextResponse.json({
+            success: true,
+            paymentId: firstPayment.id,
+            subscriptionId: asaasSubscription.id,
+            pixQrCode: qrCodeData.payload,
+            pixQrCodeBase64: qrCodeData.encodedImage,
+            pixCopiaECola: qrCodeData.payload,
+            paymentValue: PLAN_PRICES[planType as keyof typeof PLAN_PRICES],
+            dueDate: firstPayment.dueDate,
+          });
+        } catch (qrError: any) {
+          console.error("[Payment Checkout] Erro ao buscar QR Code:", qrError);
+          // Retornar mesmo sem QR Code, o frontend pode buscar depois
+          return NextResponse.json({
+            success: true,
+            paymentId: firstPayment.id,
+            subscriptionId: asaasSubscription.id,
+            paymentValue: PLAN_PRICES[planType as keyof typeof PLAN_PRICES],
+            dueDate: firstPayment.dueDate,
+            note: "Pagamento criado, aguarde alguns segundos e recarregue para ver o QR Code",
+          });
         }
-      } catch (error) {
-        console.error("[Payment Checkout] Erro ao buscar QR Code PIX:", error);
+      } catch (error: any) {
+        console.error("[Payment Checkout] Erro ao criar pagamento PIX:", error);
+        // Se der erro, retornar subscription_id mesmo assim
+        return NextResponse.json({
+          success: true,
+          subscriptionId: asaasSubscription.id,
+          paymentValue: PLAN_PRICES[planType as keyof typeof PLAN_PRICES],
+          note: "Assinatura criada. O primeiro pagamento será gerado em breve.",
+        });
       }
-
-      // Se não conseguir buscar QR Code, retornar subscription_id mesmo assim
-      return NextResponse.json({
-        success: true,
-        paymentId: asaasSubscription.id,
-        subscriptionId: asaasSubscription.id,
-        paymentValue: PLAN_PRICES[planType as keyof typeof PLAN_PRICES],
-      });
     }
 
     // Se for cartão, retornar subscription_id

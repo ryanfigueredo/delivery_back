@@ -313,6 +313,67 @@ export async function cancelAsaasSubscription(
 }
 
 /**
+ * Cria um pagamento manualmente (útil para primeiro pagamento de assinatura PIX)
+ */
+export async function createAsaasPayment(paymentData: {
+  customer: string;
+  billingType: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'DEBIT_CARD';
+  value: number;
+  dueDate: string; // YYYY-MM-DD
+  description?: string;
+  subscription?: string;
+  externalReference?: string;
+}): Promise<any> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
+  const response = await fetch(`${ASAAS_API_URL}/payments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: ASAAS_API_KEY,
+    },
+    body: JSON.stringify(paymentData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Erro ao criar pagamento no Asaas: ${JSON.stringify(error)}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Busca QR Code PIX de um pagamento
+ */
+export async function getAsaasPaymentPixQrCode(paymentId: string): Promise<{
+  encodedImage: string;
+  payload: string;
+  expirationDate: string;
+}> {
+  if (!ASAAS_API_KEY) {
+    throw new Error('ASAAS_API_KEY não configurada');
+  }
+
+  const response = await fetch(`${ASAAS_API_URL}/payments/${paymentId}/pixQrCode`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: ASAAS_API_KEY,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Erro ao buscar QR Code PIX: ${JSON.stringify(error)}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Lista pagamentos de uma assinatura
  */
 export async function getAsaasSubscriptionPayments(

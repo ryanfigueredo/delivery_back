@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { User, Save, Loader2, AlertCircle, CheckCircle2, CreditCard, ExternalLink } from "lucide-react";
 
 interface CustomerData {
   customer_cpf_cnpj: string;
@@ -157,12 +157,36 @@ function PerfilPageContent() {
       <div className="bg-white rounded-lg shadow-lg p-8">
         <div className="flex items-center gap-3 mb-6">
           <User className="text-primary-600" size={28} />
-          <h1 className="text-3xl font-bold text-gray-900">Dados do Cliente</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
         </div>
 
-        <p className="text-gray-600 mb-6">
-          Preencha seus dados para realizar assinaturas e pagamentos. Essas informações são necessárias para processar pagamentos via Asaas.
-        </p>
+        {/* Seção de Assinatura */}
+        <div className="mb-8 p-6 bg-gradient-to-r from-primary-50 to-blue-50 rounded-lg border border-primary-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CreditCard className="text-primary-600" size={24} />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Assinatura e Pagamento</h2>
+                <p className="text-sm text-gray-600">Gerencie seu plano e forma de pagamento</p>
+              </div>
+            </div>
+            <a
+              href="/dashboard/pagamento"
+              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+            >
+              <span>Gerenciar Assinatura</span>
+              <ExternalLink size={16} />
+            </a>
+          </div>
+        </div>
+
+        {/* Seção de Dados do Cliente */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Dados do Cliente</h2>
+          <p className="text-gray-600 mb-6">
+            Preencha seus dados para realizar assinaturas e pagamentos. Essas informações são necessárias para processar pagamentos via Asaas.
+          </p>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
