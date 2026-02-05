@@ -198,6 +198,8 @@ export default function RestaurantesPage() {
         setFormData({
           name: "",
           slug: "",
+          business_type: "RESTAURANTE",
+          show_prices_on_bot: true,
           username: "",
           password: "",
           userName: "",
@@ -205,6 +207,9 @@ export default function RestaurantesPage() {
           meta_phone_number_id: "",
           meta_access_token: "",
           meta_verify_token: "",
+          meta_business_account_id: "",
+          desktop_api_url: "",
+          configureDynamoDB: false,
         });
         loadData();
       } else {
@@ -919,6 +924,8 @@ export default function RestaurantesPage() {
                   setFormData({
                     name: "",
                     slug: "",
+                    business_type: "RESTAURANTE",
+                    show_prices_on_bot: true,
                     username: "",
                     password: "",
                     userName: "",
@@ -926,6 +933,9 @@ export default function RestaurantesPage() {
                     meta_phone_number_id: "",
                     meta_access_token: "",
                     meta_verify_token: "",
+                    meta_business_account_id: "",
+                    desktop_api_url: "",
+                    configureDynamoDB: false,
                   });
                 }}
                 className="text-gray-400 hover:text-gray-600"
@@ -1001,6 +1011,8 @@ export default function RestaurantesPage() {
                     setFormData({
                       name: "",
                       slug: "",
+                      business_type: "RESTAURANTE",
+                      show_prices_on_bot: true,
                       username: "",
                       password: "",
                       userName: "",
@@ -1008,6 +1020,9 @@ export default function RestaurantesPage() {
                       meta_phone_number_id: "",
                       meta_access_token: "",
                       meta_verify_token: "",
+                      meta_business_account_id: "",
+                      desktop_api_url: "",
+                      configureDynamoDB: false,
                     });
                   }}
                   className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"

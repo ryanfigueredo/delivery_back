@@ -34,10 +34,6 @@ export default function DashboardStreamPage() {
   // Buscar informações do usuário para obter business_type
   const { data: userData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
   const user = userData?.user;
-  
-  // Buscar informações do usuário para obter business_type
-  const { data: userData } = useSWR<{ success: boolean; user: any }>("/api/auth/me", fetcher);
-  const user = userData?.user;
 
   useEffect(() => {
     // Usar Server-Sent Events para atualização em tempo real
