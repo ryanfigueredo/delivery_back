@@ -180,13 +180,8 @@ export async function POST(request: NextRequest) {
         description: `Upgrade de plano - Assinatura ${planType} - Pedidos Express`,
         subscription: tenant.asaas_subscription_id!,
         externalReference: `${tenant.id}|${planType}`, // Formato: "tenant_id|planType" para webhook saber qual plano ativar
-        creditCard: {
-          holderName: cardData.holderName,
-          number: cardData.number.replace(/\s/g, ""),
-          expiryMonth: cardData.expiryMonth.padStart(2, "0"),
-          expiryYear: cardData.expiryYear,
-          ccv: cardData.ccv,
-        },
+        creditCard: cardData.number.replace(/\s/g, ""), // Número do cartão como string
+        creditCardToken: cardData.token, // Token do cartão (se disponível)
         creditCardHolderInfo: {
           name: cardData.holderName,
           email: user?.username || `tenant-${tenant.id}@pedidosexpress.com`,

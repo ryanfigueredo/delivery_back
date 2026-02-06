@@ -171,7 +171,25 @@ function CheckoutContent() {
             cardExpiry: formData.card_expiry,
             cardCvv: formData.card_cvv,
           } : undefined,
-          ...formData,
+          // Dados do negócio
+          business_name: formData.business_name,
+          business_slug: formData.business_slug,
+          business_type: formData.business_type,
+          // Dados do admin
+          admin_name: formData.admin_name,
+          admin_email: formData.admin_email,
+          admin_password: formData.admin_password,
+          // Dados para pagamento
+          customer_name: formData.customer_name,
+          customer_cpf_cnpj: formData.customer_cpf_cnpj,
+          customer_phone: formData.customer_phone,
+          customer_postal_code: formData.customer_postal_code,
+          customer_address: formData.customer_address,
+          customer_address_number: formData.customer_address_number,
+          customer_address_complement: formData.customer_address_complement,
+          customer_province: formData.customer_province,
+          customer_city: formData.customer_city,
+          customer_state: formData.customer_state,
         }),
       });
 

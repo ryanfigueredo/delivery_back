@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
             : -1, // -1 = ilimitado
         subscription_status: "pending",
         // Dados do cliente para pagamento
-        customer_name: customer_name || business_name,
         customer_cpf_cnpj: customer_cpf_cnpj.replace(/\D/g, ""),
         customer_phone: customer_phone.replace(/\D/g, ""),
         customer_postal_code: customer_postal_code?.replace(/\D/g, ""),
