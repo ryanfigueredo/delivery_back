@@ -323,13 +323,9 @@ export async function createAsaasPayment(paymentData: {
   description?: string;
   subscription?: string;
   externalReference?: string;
-  creditCard?: {
-    holderName: string;
-    number: string;
-    expiryMonth: string;
-    expiryYear: string;
-    ccv: string;
-  };
+  installmentCount?: number; // Número de parcelas (1-12)
+  creditCard?: string; // Número do cartão ou token
+  creditCardToken?: string; // Token do cartão (se disponível)
   creditCardHolderInfo?: {
     name: string;
     email: string;

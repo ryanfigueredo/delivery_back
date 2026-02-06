@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
             subscription_expires_at: payment.dueDate
               ? new Date(payment.dueDate)
               : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
+            is_active: true, // Ativar tenant após pagamento confirmado
           },
         });
         console.log(`[Asaas Webhook] Pagamento confirmado para tenant: ${tenant.id}, plano ativado: ${planTypeToActivate}`);
