@@ -84,12 +84,13 @@ export default function VendasPage() {
         </div>
 
         {/* Pricing Table - Estilo Comparativo */}
-        <div className="overflow-x-auto mb-16">
+        {/* Desktop: Tabela completa */}
+        <div className="hidden lg:block overflow-x-auto mb-16">
           <div className="inline-block min-w-full">
             <div className="grid grid-cols-4 gap-0 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 relative">
               {/* Header com Features */}
-              <div className="bg-gray-50 p-6 border-r border-gray-200">
-                <div className="h-32"></div>
+              <div className="bg-gray-50 p-4 md:p-6 border-r border-gray-200">
+                <div className="h-24 md:h-32"></div>
                 <div className="space-y-3 pt-4">
                   <div className="text-sm font-semibold text-gray-700 py-3 border-b border-gray-200">Bot WhatsApp</div>
                   <div className="text-sm font-semibold text-gray-700 py-3 border-b border-gray-200">Mensagens/mês</div>
@@ -100,13 +101,13 @@ export default function VendasPage() {
                   <div className="text-sm font-semibold text-gray-700 py-3 border-b border-gray-200">Suporte</div>
                   <div className="text-sm font-semibold text-gray-700 py-3 border-b border-gray-200">Filiais</div>
                   <div className="text-sm font-semibold text-gray-700 py-3 border-b border-gray-200">Relatórios Avançados</div>
-                  <div className="text-sm font-semibold text-gray-700 py-3">Consultoria</div>
+                  <div className="text-sm font-semibold text-gray-700 py-3">Consultoria Mensal</div>
                 </div>
               </div>
 
               {/* Plano Básico */}
-              <div className="bg-white p-6 border-r border-gray-200 text-center">
-                <div className="h-32 flex flex-col justify-center">
+              <div className="bg-white p-4 md:p-6 border-r border-gray-200 text-center">
+                <div className="h-24 md:h-32 flex flex-col justify-center">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Básico</h3>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
                     R$ 297<span className="text-base text-gray-500">/mês</span>
@@ -136,8 +137,8 @@ export default function VendasPage() {
               </div>
 
               {/* Plano Completo - Destaque */}
-              <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600 p-6 border-r border-amber-500 text-center">
-                <div className="h-32 flex flex-col justify-center">
+              <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600 p-4 md:p-6 border-r border-amber-500 text-center">
+                <div className="h-24 md:h-32 flex flex-col justify-center">
                   <h3 className="text-xl font-bold text-white mb-2 font-display">Completo</h3>
                   <div className="text-3xl font-bold text-white mb-1 font-display">
                     R$ 497<span className="text-base text-amber-100">/mês</span>
@@ -167,8 +168,8 @@ export default function VendasPage() {
               </div>
 
               {/* Plano Premium */}
-              <div className="bg-white p-6 text-center">
-                <div className="h-32 flex flex-col justify-center">
+              <div className="bg-white p-4 md:p-6 text-center">
+                <div className="h-24 md:h-32 flex flex-col justify-center">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Premium</h3>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
                     R$ 797<span className="text-base text-gray-500">/mês</span>
@@ -180,12 +181,14 @@ export default function VendasPage() {
                   <div className="flex items-center justify-center text-sm text-gray-700 font-medium py-3 border-b border-gray-100 h-[48px]">Ilimitado</div>
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
-                  <div className="flex items-center justify-center text-sm text-gray-700 font-medium py-3 border-b border-gray-100 h-[48px]">Ilimitado</div>
+                  <div className="flex items-center justify-center text-sm text-gray-700 font-medium py-3 border-b border-gray-100 h-[48px]">1.000</div>
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
                   <div className="flex items-center justify-center text-sm text-gray-700 py-3 border-b border-gray-100 h-[48px]">Resposta Rápida</div>
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
-                  <div className="flex items-center justify-center py-3 h-[48px]"><Check size={20} className="text-amber-600" /></div>
+                  <div className="flex items-center justify-center py-3 h-[48px]">
+                    <span className="text-xs text-gray-600 text-center leading-tight">1h/mês personalizada</span>
+                  </div>
                 </div>
                 <a
                   href="https://wa.me/5521997624873?text=Olá! Gostaria de começar com o plano Premium."
@@ -200,8 +203,173 @@ export default function VendasPage() {
           </div>
         </div>
 
+        {/* Mobile/Tablet: Cards verticais */}
+        <div className="lg:hidden grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          {/* Plano Básico */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Básico</h3>
+              <div className="text-4xl font-bold text-gray-900 mb-1">
+                R$ 297<span className="text-lg text-gray-500">/mês</span>
+              </div>
+              <p className="text-sm text-gray-500">Ideal para começar</p>
+            </div>
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Bot WhatsApp</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Mensagens/mês</span>
+                <span className="text-sm font-medium text-gray-900">1.000</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">App Mobile</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Dashboard Web</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Notas Fiscais/mês</span>
+                <X size={20} className="text-gray-300" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Impressão Bluetooth</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Suporte</span>
+                <span className="text-sm text-gray-700">Email</span>
+              </div>
+            </div>
+            <a
+              href="https://wa.me/5521997624873?text=Olá! Gostaria de começar com o plano Básico."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition text-sm flex items-center justify-center gap-2"
+            >
+              Começar agora →
+            </a>
+          </div>
+
+          {/* Plano Completo */}
+          <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600 rounded-2xl shadow-xl border-2 border-amber-500 p-6 text-white">
+            <div className="text-center mb-6">
+              <span className="inline-block px-3 py-1 bg-white text-amber-600 rounded-full text-xs font-bold mb-2">
+                RECOMENDADO
+              </span>
+              <h3 className="text-2xl font-bold mb-2 font-display">Completo</h3>
+              <div className="text-4xl font-bold mb-1 font-display">
+                R$ 497<span className="text-lg text-amber-100">/mês</span>
+              </div>
+              <p className="text-sm text-amber-100">Mais popular</p>
+            </div>
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">Bot WhatsApp</span>
+                <Check size={20} className="text-white" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">Mensagens/mês</span>
+                <span className="text-sm font-medium">2.500</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">App Mobile</span>
+                <Check size={20} className="text-white" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">Dashboard Web</span>
+                <Check size={20} className="text-white" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">Notas Fiscais/mês</span>
+                <span className="text-sm font-medium">500</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">Impressão Bluetooth</span>
+                <Check size={20} className="text-white" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
+                <span className="text-sm">Suporte</span>
+                <span className="text-sm">Prioritário</span>
+              </div>
+            </div>
+            <a
+              href="https://wa.me/5521997624873?text=Olá! Gostaria de começar com o plano Completo."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-white text-amber-600 py-3 rounded-lg font-semibold hover:bg-amber-50 transition text-sm shadow-lg flex items-center justify-center gap-2"
+            >
+              Começar agora →
+            </a>
+          </div>
+
+          {/* Plano Premium */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Premium</h3>
+              <div className="text-4xl font-bold text-gray-900 mb-1">
+                R$ 797<span className="text-lg text-gray-500">/mês</span>
+              </div>
+              <p className="text-sm text-gray-500">Para grandes operações</p>
+            </div>
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Bot WhatsApp</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Mensagens/mês</span>
+                <span className="text-sm font-medium text-gray-900">Ilimitado</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">App Mobile</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Dashboard Web</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Notas Fiscais/mês</span>
+                <span className="text-sm font-medium text-gray-900">1.000</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Impressão Bluetooth</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Suporte</span>
+                <span className="text-sm text-gray-700">Resposta Rápida</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Filiais</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">Relatórios Avançados</span>
+                <Check size={20} className="text-amber-600" />
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-gray-700">Consultoria</span>
+                <span className="text-xs text-gray-600 text-right">1h/mês personalizada</span>
+              </div>
+            </div>
+            <a
+              href="https://wa.me/5521997624873?text=Olá! Gostaria de começar com o plano Premium."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition text-sm flex items-center justify-center gap-2"
+            >
+              Começar agora →
+            </a>
+          </div>
+        </div>
+
         {/* Observação sobre Impressora */}
-        <div className="bg-amber-50 rounded-xl p-6 mb-8 max-w-4xl mx-auto border border-amber-200">
+        <div className="bg-amber-50 rounded-xl p-4 md:p-6 mb-8 max-w-4xl mx-auto border border-amber-200">
           <div className="flex items-start gap-3">
             <Info size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -216,26 +384,34 @@ export default function VendasPage() {
         </div>
 
         {/* Emissão de NFE */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-8 mb-8 border-2 border-amber-100">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-4 md:p-8 mb-8 border-2 border-amber-100">
           <h2 className="text-3xl font-extrabold text-gray-900 mb-2 text-center font-display tracking-tight">
             Emissão de Nota Fiscal (NF-e)
           </h2>
           <p className="text-slate-600 text-center mb-6 max-w-2xl mx-auto">
-            O plano Completo inclui <strong>500 notas fiscais por mês</strong>. 
+            O plano <strong>Completo</strong> inclui <strong>500 notas fiscais por mês</strong> e o plano <strong>Premium</strong> inclui <strong>1.000 notas fiscais por mês</strong>. 
             Se você precisar emitir mais notas fiscais, o valor adicional será cobrado 
             proporcionalmente.
           </p>
-          <div className="bg-amber-50 rounded-xl p-6 max-w-2xl mx-auto">
+          <div className="bg-amber-50 rounded-xl p-4 md:p-6 max-w-2xl mx-auto">
             <div className="text-center">
               <p className="text-lg text-gray-900 mb-2">
                 <strong>Valor adicional:</strong>
               </p>
               <p className="text-2xl font-bold text-amber-600 font-display">
-                R$ 0,50 por nota fiscal adicional
+                R$ 0,90 por nota fiscal adicional
               </p>
               <p className="text-sm text-gray-700 mt-3">
                 Exemplo: Se emitir 750 notas fiscais no mês, serão cobradas 
-                <strong className="text-gray-900"> 250 notas adicionais × R$ 0,50 = R$ 125,00</strong> além da mensalidade.
+                <strong className="text-gray-900"> 250 notas adicionais × R$ 0,90 = R$ 225,00</strong> além da mensalidade.
+              </p>
+              <p className="text-xs text-gray-600 mt-4 pt-4 border-t border-amber-200">
+                💡 <strong>Transparência:</strong> O custo base por nota fiscal é de R$ 0,63. 
+                O valor de R$ 0,90 garante cobertura de custos e margem operacional para manutenção do serviço.
+              </p>
+              <p className="text-xs text-gray-600 mt-3">
+                📋 <strong>Plano Premium:</strong> Inclui até 1.000 notas fiscais por mês. 
+                Notas adicionais também custam R$ 0,90 cada.
               </p>
             </div>
           </div>

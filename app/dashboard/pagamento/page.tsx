@@ -50,7 +50,7 @@ const PLANS: Plan[] = [
       "Bot WhatsApp",
       "App Mobile",
       "Dashboard Web",
-      "Notas Fiscais ilimitadas",
+      "1.000 Notas Fiscais/mês",
       "Impressão Bluetooth",
       "Suporte Resposta Rápida",
       "Múltiplas Filiais",

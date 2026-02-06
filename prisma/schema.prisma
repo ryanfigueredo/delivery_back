@@ -73,6 +73,7 @@ model Tenant {
   orders      Order[]
   users       User[]
   message_usage MessageUsage[]
+  whatsapp_messages WhatsAppMessage[]
 
   @@map("tenants")
 }
@@ -136,6 +137,13 @@ model MessageUsage {
   year        Int      // 2026
   messages_sent Int    @default(0)
   conversations_started Int @default(0)
+  // Contadores por categoria
+  messages_service Int @default(0) // Mensagens de Serviço (gratuitas)
+  messages_utility Int @default(0) // Mensagens de Utilidade
+  messages_marketing Int @default(0) // Mensagens de Marketing
+  messages_auth Int @default(0) // Mensagens de Autenticação
+  // Custos em BRL
+  total_cost_brl Decimal @default(0) @db.Decimal(10, 4)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   
@@ -145,4 +153,26 @@ model MessageUsage {
   @@index([tenant_id])
   @@index([tenant_id, year, month])
   @@map("message_usage")
+}
+
+// Rastreamento detalhado de mensagens WhatsApp individuais
+model WhatsAppMessage {
+  id          String   @id @default(uuid())
+  tenant_id   String
+  to_phone    String   // Número de destino
+  category    String   // SERVICE, UTILITY, MARKETING, AUTHENTICATION
+  cost_usd    Decimal  @default(0) @db.Decimal(10, 6) // Custo em USD
+  cost_brl    Decimal  @default(0) @db.Decimal(10, 4) // Custo em BRL
+  message_type String?  // text, template, interactive
+  template_name String? // Nome do template (se aplicável)
+  within_24h_window Boolean @default(true) // Se estava dentro da janela de 24h
+  created_at  DateTime @default(now())
+  
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  
+  @@index([tenant_id])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, category])
+  @@index([tenant_id, category, created_at])
+  @@map("whatsapp_messages")
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Building2, ArrowRight } from 'lucide-react'
+import { Building2, ArrowRight, DollarSign } from 'lucide-react'
 
 interface Tenant {
   id: string
@@ -104,6 +104,13 @@ export default function AdminPage() {
               <p className="text-sm text-gray-500">Visão geral de todos os clientes</p>
             </div>
             <div className="flex items-center gap-3">
+              <Link
+                href="/admin/custos-whatsapp"
+                className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm hover:shadow-md"
+              >
+                <DollarSign size={18} />
+                Custos WhatsApp
+              </Link>
               <Link
                 href="/admin/clientes"
                 className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md"
