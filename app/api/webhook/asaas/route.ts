@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PLAN_PRICES } from "@/lib/asaas";
+import { PLAN_PRICES, updateAsaasSubscription } from "@/lib/asaas";
 
 const ASAAS_API_URL = process.env.ASAAS_API_URL || "https://www.asaas.com/api/v3";
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     // Buscar tenant pelo externalReference ou subscription_id
     let tenant = null;
     const subscriptionId = payment?.subscription || subscription?.id;
+    let pendingPlanType: string | null = null;
 
     if (subscriptionId) {
       tenant = await prisma.tenant.findFirst({
@@ -41,10 +42,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!tenant && payment?.externalReference) {
-      tenant = await prisma.tenant.findUnique({
-        where: { id: payment.externalReference },
-      });
+    // Verificar se externalReference contém plano pendente (formato: "tenant_id|planType")
+    if (payment?.externalReference) {
+      const externalRefParts = payment.externalReference.split("|");
+      if (externalRefParts.length === 2) {
+        // Formato: tenant_id|planType (upgrade de plano)
+        const tenantId = externalRefParts[0];
+        pendingPlanType = externalRefParts[1];
+        tenant = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+        });
+      } else {
+        // Formato normal: apenas tenant_id
+        tenant = await prisma.tenant.findUnique({
+          where: { id: payment.externalReference },
+        });
+      }
     }
 
     if (!tenant && subscription?.externalReference) {
@@ -65,17 +78,21 @@ export async function POST(request: NextRequest) {
       case "PAYMENT_CONFIRMED":
       case "PAYMENT_RECEIVED":
         // Pagamento confirmado - atualizar tenant e PLANO
-        // Buscar assinatura para determinar o plano baseado no valor
         let planTypeToActivate = tenant.plan_type || "basic";
         
-        if (subscriptionId) {
+        // Se tem plano pendente no externalReference, usar esse plano
+        if (pendingPlanType) {
+          planTypeToActivate = pendingPlanType;
+          console.log(`[Asaas Webhook] Plano pendente encontrado: ${pendingPlanType}`);
+        } else if (subscriptionId) {
+          // Caso contrário, buscar assinatura para determinar o plano baseado no valor
           try {
             const subscriptionResponse = await fetch(
-              `${process.env.ASAAS_API_URL || "https://www.asaas.com/api/v3"}/subscriptions/${subscriptionId}`,
+              `${ASAAS_API_URL}/subscriptions/${subscriptionId}`,
               {
                 headers: {
                   "Content-Type": "application/json",
-                  access_token: process.env.ASAAS_API_KEY || "",
+                  access_token: ASAAS_API_KEY || "",
                 },
               }
             );
@@ -96,6 +113,20 @@ export async function POST(request: NextRequest) {
           } catch (error) {
             console.error("[Asaas Webhook] Erro ao buscar assinatura:", error);
             // Usar plano atual do tenant se não conseguir buscar
+          }
+        }
+        
+        // Atualizar assinatura no Asaas com novo valor APENAS após pagamento confirmado
+        if (subscriptionId && pendingPlanType) {
+          try {
+            const newValue = PLAN_PRICES[pendingPlanType as keyof typeof PLAN_PRICES];
+            await updateAsaasSubscription(subscriptionId, {
+              value: newValue,
+              description: `Assinatura ${pendingPlanType} - Pedidos Express`,
+            });
+            console.log(`[Asaas Webhook] Assinatura atualizada no Asaas para plano: ${pendingPlanType}`);
+          } catch (error) {
+            console.error("[Asaas Webhook] Erro ao atualizar assinatura no Asaas:", error);
           }
         }
         
@@ -150,28 +181,21 @@ export async function POST(request: NextRequest) {
 
       case "SUBSCRIPTION_UPDATED":
         // Assinatura atualizada (mudança de plano, valor, etc.)
+        // IMPORTANTE: NÃO atualizar o plano aqui - só atualizar quando PAYMENT_CONFIRMED chegar
+        // Isso evita que o plano seja ativado antes do pagamento ser confirmado
         if (subscription) {
-          // Determinar novo plano baseado no valor
-          const newValue = subscription.value || 0;
-          let newPlanType = "basic";
-          
-          if (newValue >= PLAN_PRICES.premium) {
-            newPlanType = "premium";
-          } else if (newValue >= PLAN_PRICES.complete) {
-            newPlanType = "complete";
-          }
-
+          // Apenas atualizar status e datas, mas NÃO o plan_type
           await prisma.tenant.update({
             where: { id: tenant.id },
             data: {
-              plan_type: newPlanType,
-              subscription_status: subscription.status === "ACTIVE" ? "active" : tenant.subscription_status || "active",
+              // NÃO atualizar plan_type aqui - só após pagamento confirmado
+              subscription_status: subscription.status === "ACTIVE" ? "active" : tenant.subscription_status || "pending",
               subscription_expires_at: subscription.nextDueDate
                 ? new Date(subscription.nextDueDate)
                 : tenant.subscription_expires_at,
             },
           });
-          console.log(`[Asaas Webhook] Assinatura atualizada para tenant: ${tenant.id}, novo plano: ${newPlanType}`);
+          console.log(`[Asaas Webhook] Assinatura atualizada para tenant: ${tenant.id} - aguardando pagamento para ativar novo plano`);
         }
         break;
 

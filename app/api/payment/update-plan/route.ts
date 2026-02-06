@@ -123,8 +123,10 @@ export async function POST(request: NextRequest) {
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
     // Criar pagamento imediato para diferença do plano
+    // IMPORTANTE: NÃO atualizar assinatura no Asaas ainda - só após pagamento confirmado via webhook
+    // O plano será atualizado quando PAYMENT_CONFIRMED chegar com o plano no externalReference
     if (paymentMethod === "pix") {
-      // Criar pagamento PIX
+      // Criar pagamento PIX com plano pendente no externalReference
       const payment = await createAsaasPayment({
         customer: tenant.asaas_customer_id!,
         billingType: "PIX",
@@ -132,21 +134,16 @@ export async function POST(request: NextRequest) {
         dueDate: dueDateStr,
         description: `Upgrade de plano - Assinatura ${planType} - Pedidos Express`,
         subscription: tenant.asaas_subscription_id!,
-        externalReference: tenant.id,
+        externalReference: `${tenant.id}|${planType}`, // Formato: "tenant_id|planType" para webhook saber qual plano ativar
       });
 
       // Buscar QR Code
       try {
         const qrCodeData = await getAsaasPaymentPixQrCode(payment.id);
         
-        // Atualizar assinatura no Asaas (mas não ativar plano ainda - só após pagamento confirmado)
-        await updateAsaasSubscription(
-          tenant.asaas_subscription_id,
-          {
-            value: newValue,
-            description: `Assinatura ${planType} - Pedidos Express`,
-          }
-        );
+        // NÃO atualizar assinatura no Asaas ainda - só após pagamento confirmado
+        // A assinatura será atualizada automaticamente quando o pagamento for confirmado via webhook
+        // Isso evita que o plano seja ativado antes do pagamento
 
         return NextResponse.json({
           success: true,
@@ -182,7 +179,7 @@ export async function POST(request: NextRequest) {
         dueDate: dueDateStr,
         description: `Upgrade de plano - Assinatura ${planType} - Pedidos Express`,
         subscription: tenant.asaas_subscription_id!,
-        externalReference: tenant.id,
+        externalReference: `${tenant.id}|${planType}`, // Formato: "tenant_id|planType" para webhook saber qual plano ativar
         creditCard: {
           holderName: cardData.holderName,
           number: cardData.number.replace(/\s/g, ""),
@@ -201,14 +198,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Atualizar assinatura no Asaas
-      await updateAsaasSubscription(
-        tenant.asaas_subscription_id,
-        {
-          value: newValue,
-          description: `Assinatura ${planType} - Pedidos Express`,
-        }
-      );
+      // NÃO atualizar assinatura no Asaas ainda - só após pagamento confirmado
+      // A assinatura será atualizada automaticamente quando o pagamento for confirmado via webhook
 
       // Se pagamento com cartão, pode ser processado imediatamente
       // O webhook PAYMENT_CONFIRMED vai atualizar o plano
