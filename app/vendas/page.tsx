@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { AppIcon } from "@/components/AppIcon";
 import { Check, Star, Info, Gift, X } from "lucide-react";
 import { DeliveryAnimation } from "@/components/DeliveryAnimation";
-import { getPlanPricing, formatCurrency, PLAN_PRICES_MONTHLY, PLAN_PRICES_YEARLY, PLAN_PRICES_YEARLY_MONTHLY } from "@/lib/plan-pricing";
+// Preços em stand-by; quando integrar pagamento, use getPlanPricing de @/lib/plan-pricing
+
+const WHATSAPP_VENDAS = "5521997624873";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_VENDAS}?text=${encodeURIComponent("Olá! Gostaria de conhecer os planos do Pedidos Express.")}`;
 
 /** Ícone WhatsApp usando PNG (padrão) ou SVG branco (para footer) */
 function WhatsAppIcon({ size = 18, white = false }: { size?: number; white?: boolean }) {
@@ -41,12 +43,6 @@ function WhatsAppIcon({ size = 18, white = false }: { size?: number; white?: boo
 }
 
 export default function VendasPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-
-  const basicPricing = getPlanPricing("basic", billingCycle);
-  const completePricing = getPlanPricing("complete", billingCycle);
-  const premiumPricing = getPlanPricing("premium", billingCycle);
-
   return (
     <div className="min-h-screen bg-[#faf9f7] relative">
       {/* Header */}
@@ -93,37 +89,6 @@ export default function VendasPage() {
           </div>
         </div>
 
-        {/* Toggle Mensal/Anual */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white rounded-full p-1 shadow-lg border border-gray-200 inline-flex">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-6 py-2 rounded-full font-semibold text-sm transition-all ${
-                billingCycle === "monthly"
-                  ? "bg-primary-600 text-white shadow-md"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Mensal
-            </button>
-            <button
-              onClick={() => setBillingCycle("yearly")}
-              className={`px-6 py-2 rounded-full font-semibold text-sm transition-all relative ${
-                billingCycle === "yearly"
-                  ? "bg-primary-600 text-white shadow-md"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Anual
-              {billingCycle === "yearly" && (
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  -15%
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Pricing Table - Estilo Comparativo */}
         {/* Desktop: Tabela completa */}
         <div className="hidden lg:block overflow-x-auto mb-16">
@@ -150,31 +115,8 @@ export default function VendasPage() {
               <div className="bg-white p-4 md:p-6 border-r border-gray-200 text-center">
                 <div className="h-24 md:h-32 flex flex-col justify-center">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Básico</h3>
-                  {billingCycle === "monthly" ? (
-                    <>
-                      <div className="text-3xl font-bold text-gray-900 mb-1">
-                        R$ {basicPricing.monthlyPrice.toFixed(0)}
-                        <span className="text-base text-gray-500">/mês</span>
-                      </div>
-                      <p className="text-xs text-gray-500">Ideal para começar</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-3xl font-bold text-gray-900 mb-1">
-                        R$ {basicPricing.monthlyEquivalent.toFixed(0)}
-                        <span className="text-base text-gray-500">/mês</span>
-                      </div>
-                      <p className="text-xs text-gray-500 line-through text-gray-400">
-                        R$ {basicPricing.monthlyPrice.toFixed(0)}/mês
-                      </p>
-                      <p className="text-xs text-green-600 font-semibold mt-1">
-                        Economize {basicPricing.discount}% no plano anual
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        R$ {basicPricing.yearlyPrice.toFixed(0)}/ano
-                      </p>
-                    </>
-                  )}
+                  <div className="text-2xl font-bold text-gray-900 mb-1">Consultar</div>
+                  <p className="text-xs text-gray-500">Ideal para começar</p>
                 </div>
                 <div className="space-y-3 pt-4">
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
@@ -189,7 +131,9 @@ export default function VendasPage() {
                   <div className="flex items-center justify-center py-3 h-[48px]"><X size={20} className="text-gray-300" /></div>
                 </div>
                 <a
-                  href={`/checkout?plan=basic&cycle=${billingCycle}`}
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full mt-6 bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition text-sm flex items-center justify-center gap-2"
                 >
                   Começar agora →
@@ -200,31 +144,8 @@ export default function VendasPage() {
               <div className="bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600 p-4 md:p-6 border-r border-amber-500 text-center">
                 <div className="h-24 md:h-32 flex flex-col justify-center">
                   <h3 className="text-xl font-bold text-white mb-2 font-display">Completo</h3>
-                  {billingCycle === "monthly" ? (
-                    <>
-                      <div className="text-3xl font-bold text-white mb-1 font-display">
-                        R$ {completePricing.monthlyPrice.toFixed(0)}
-                        <span className="text-base text-amber-100">/mês</span>
-                      </div>
-                      <p className="text-xs text-amber-100">Recomendado</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-3xl font-bold text-white mb-1 font-display">
-                        R$ {completePricing.monthlyEquivalent.toFixed(0)}
-                        <span className="text-base text-amber-100">/mês</span>
-                      </div>
-                      <p className="text-xs text-amber-100 line-through opacity-75">
-                        R$ {completePricing.monthlyPrice.toFixed(0)}/mês
-                      </p>
-                      <p className="text-xs text-white font-semibold mt-1">
-                        Economize {completePricing.discount}% no plano anual
-                      </p>
-                      <p className="text-xs text-amber-100 mt-1">
-                        R$ {completePricing.yearlyPrice.toFixed(0)}/ano
-                      </p>
-                    </>
-                  )}
+                  <div className="text-2xl font-bold text-white mb-1 font-display">Consultar</div>
+                  <p className="text-xs text-amber-100">Recomendado</p>
                 </div>
                 <div className="space-y-3 pt-4">
                   <div className="flex items-center justify-center py-3 border-b border-amber-500/30 h-[48px]"><Check size={20} className="text-white" /></div>
@@ -239,7 +160,9 @@ export default function VendasPage() {
                   <div className="flex items-center justify-center py-3 h-[48px]"><X size={20} className="text-white opacity-50" /></div>
                 </div>
                 <a
-                  href={`/checkout?plan=complete&cycle=${billingCycle}`}
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full mt-6 bg-white text-amber-600 py-3 rounded-lg font-semibold hover:bg-amber-50 transition text-sm shadow-lg flex items-center justify-center gap-2"
                 >
                   Começar agora →
@@ -250,31 +173,8 @@ export default function VendasPage() {
               <div className="bg-white p-4 md:p-6 text-center">
                 <div className="h-24 md:h-32 flex flex-col justify-center">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Premium</h3>
-                  {billingCycle === "monthly" ? (
-                    <>
-                      <div className="text-3xl font-bold text-gray-900 mb-1">
-                        R$ {premiumPricing.monthlyPrice.toFixed(0)}
-                        <span className="text-base text-gray-500">/mês</span>
-                      </div>
-                      <p className="text-xs text-gray-500">Para grandes operações</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-3xl font-bold text-gray-900 mb-1">
-                        R$ {premiumPricing.monthlyEquivalent.toFixed(0)}
-                        <span className="text-base text-gray-500">/mês</span>
-                      </div>
-                      <p className="text-xs text-gray-500 line-through text-gray-400">
-                        R$ {premiumPricing.monthlyPrice.toFixed(0)}/mês
-                      </p>
-                      <p className="text-xs text-green-600 font-semibold mt-1">
-                        Economize {premiumPricing.discount}% no plano anual
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        R$ {premiumPricing.yearlyPrice.toFixed(0)}/ano
-                      </p>
-                    </>
-                  )}
+                  <div className="text-2xl font-bold text-gray-900 mb-1">Consultar</div>
+                  <p className="text-xs text-gray-500">Para grandes operações</p>
                 </div>
                 <div className="space-y-3 pt-4">
                   <div className="flex items-center justify-center py-3 border-b border-gray-100 h-[48px]"><Check size={20} className="text-amber-600" /></div>
@@ -291,7 +191,9 @@ export default function VendasPage() {
                   </div>
                 </div>
                 <a
-                  href={`/checkout?plan=premium&cycle=${billingCycle}`}
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full mt-6 bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition text-sm flex items-center justify-center gap-2"
                 >
                   Começar agora →
@@ -307,31 +209,8 @@ export default function VendasPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Básico</h3>
-              {billingCycle === "monthly" ? (
-                <>
-                  <div className="text-4xl font-bold text-gray-900 mb-1">
-                    R$ {basicPricing.monthlyPrice.toFixed(0)}
-                    <span className="text-lg text-gray-500">/mês</span>
-                  </div>
-                  <p className="text-sm text-gray-500">Ideal para começar</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-4xl font-bold text-gray-900 mb-1">
-                    R$ {basicPricing.monthlyEquivalent.toFixed(0)}
-                    <span className="text-lg text-gray-500">/mês</span>
-                  </div>
-                  <p className="text-sm text-gray-500 line-through text-gray-400">
-                    R$ {basicPricing.monthlyPrice.toFixed(0)}/mês
-                  </p>
-                  <p className="text-sm text-green-600 font-semibold mt-1">
-                    Economize {basicPricing.discount}% no plano anual
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    R$ {basicPricing.yearlyPrice.toFixed(0)}/ano
-                  </p>
-                </>
-              )}
+              <div className="text-3xl font-bold text-gray-900 mb-1">Consultar</div>
+              <p className="text-sm text-gray-500">Ideal para começar</p>
             </div>
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -364,7 +243,9 @@ export default function VendasPage() {
               </div>
             </div>
             <a
-              href={`/checkout?plan=basic&cycle=${billingCycle}`}
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition text-sm flex items-center justify-center gap-2"
             >
               Começar agora →
@@ -378,31 +259,8 @@ export default function VendasPage() {
                 RECOMENDADO
               </span>
               <h3 className="text-2xl font-bold mb-2 font-display">Completo</h3>
-              {billingCycle === "monthly" ? (
-                <>
-                  <div className="text-4xl font-bold mb-1 font-display">
-                    R$ {completePricing.monthlyPrice.toFixed(0)}
-                    <span className="text-lg text-amber-100">/mês</span>
-                  </div>
-                  <p className="text-sm text-amber-100">Mais popular</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-4xl font-bold mb-1 font-display">
-                    R$ {completePricing.monthlyEquivalent.toFixed(0)}
-                    <span className="text-lg text-amber-100">/mês</span>
-                  </div>
-                  <p className="text-sm text-amber-100 line-through opacity-75">
-                    R$ {completePricing.monthlyPrice.toFixed(0)}/mês
-                  </p>
-                  <p className="text-sm text-white font-semibold mt-1">
-                    Economize {completePricing.discount}% no plano anual
-                  </p>
-                  <p className="text-xs text-amber-100 mt-1">
-                    R$ {completePricing.yearlyPrice.toFixed(0)}/ano
-                  </p>
-                </>
-              )}
+              <div className="text-3xl font-bold mb-1 font-display">Consultar</div>
+              <p className="text-sm text-amber-100">Mais popular</p>
             </div>
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between py-2 border-b border-amber-500/30">
@@ -435,7 +293,9 @@ export default function VendasPage() {
               </div>
             </div>
             <a
-              href={`/checkout?plan=complete&cycle=${billingCycle}`}
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full bg-white text-amber-600 py-3 rounded-lg font-semibold hover:bg-amber-50 transition text-sm shadow-lg flex items-center justify-center gap-2"
             >
               Começar agora →
@@ -446,31 +306,8 @@ export default function VendasPage() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Premium</h3>
-              {billingCycle === "monthly" ? (
-                <>
-                  <div className="text-4xl font-bold text-gray-900 mb-1">
-                    R$ {premiumPricing.monthlyPrice.toFixed(0)}
-                    <span className="text-lg text-gray-500">/mês</span>
-                  </div>
-                  <p className="text-sm text-gray-500">Para grandes operações</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-4xl font-bold text-gray-900 mb-1">
-                    R$ {premiumPricing.monthlyEquivalent.toFixed(0)}
-                    <span className="text-lg text-gray-500">/mês</span>
-                  </div>
-                  <p className="text-sm text-gray-500 line-through text-gray-400">
-                    R$ {premiumPricing.monthlyPrice.toFixed(0)}/mês
-                  </p>
-                  <p className="text-sm text-green-600 font-semibold mt-1">
-                    Economize {premiumPricing.discount}% no plano anual
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    R$ {premiumPricing.yearlyPrice.toFixed(0)}/ano
-                  </p>
-                </>
-              )}
+              <div className="text-3xl font-bold text-gray-900 mb-1">Consultar</div>
+              <p className="text-sm text-gray-500">Para grandes operações</p>
             </div>
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -515,7 +352,9 @@ export default function VendasPage() {
               </div>
             </div>
             <a
-              href={`/checkout?plan=premium&cycle=${billingCycle}`}
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition text-sm flex items-center justify-center gap-2"
             >
               Começar agora →
