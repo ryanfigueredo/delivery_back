@@ -12,13 +12,33 @@ interface PriorityConversation {
   whatsappUrl: string;
   waitTime: number;
   timestamp: number;
-  lastMessage: number;
+  lastMessage: string;
+  customerName?: string | null;
+}
+
+function formatPhoneDisplay(phone: string): string {
+  const clean = String(phone).replace(/\D/g, "");
+  const digits = clean.startsWith("55") && clean.length > 11 ? clean.slice(2) : clean;
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return phone;
 }
 
 const fetcher = (url: string) =>
   fetch(url)
     .then((res) => res.json())
-    .then((data) => data.conversations || []);
+    .then((data) => {
+      const list = data.conversations || [];
+      return list.map((c: { customer_phone: string; customer_name?: string | null; last_message_at?: string | null; last_message?: string | null; last_direction?: string; message_count?: number }) => ({
+        phone: c.customer_phone,
+        phoneFormatted: formatPhoneDisplay(c.customer_phone),
+        whatsappUrl: `https://wa.me/${c.customer_phone.replace(/\D/g, "").replace(/^(\d{10,11})$/, "55$1")}`,
+        waitTime: 0,
+        timestamp: c.last_message_at ? new Date(c.last_message_at).getTime() : Date.now(),
+        lastMessage: c.last_message ?? "",
+        customerName: c.customer_name ?? null,
+      }));
+    });
 
 export default function AtendimentoPage() {
   const router = useRouter();
@@ -46,7 +66,7 @@ export default function AtendimentoPage() {
     isLoading,
     mutate,
   } = useSWR<PriorityConversation[]>(
-    "/api/admin/priority-conversations",
+    "/api/admin/inbox/conversations",
     fetcher,
     {
       refreshInterval: 10000,
@@ -129,10 +149,10 @@ export default function AtendimentoPage() {
                 className="text-emerald-500 mx-auto mb-4"
               />
               <p className="text-gray-700 font-semibold mb-2">
-                Nenhuma conversa prioritária no momento
+                Nenhuma conversa ainda
               </p>
               <p className="text-gray-500 text-sm">
-                Clientes que pedirem atendimento aparecerão aqui
+                As conversas dos clientes com o bot aparecerão aqui assim que alguém enviar mensagem.
               </p>
             </div>
           )}
@@ -170,8 +190,8 @@ export default function AtendimentoPage() {
                     <p className="font-semibold truncate">
                       {conv.phoneFormatted}
                     </p>
-                    <p className="text-xs opacity-80">
-                      Aguardando {formatWaitTime(conv.waitTime)}
+                    <p className="text-xs opacity-80 truncate">
+                      {conv.lastMessage ? `"${conv.lastMessage.slice(0, 40)}${conv.lastMessage.length > 40 ? "…" : ""}"` : "Sem mensagens"}
                     </p>
                   </button>
                 ))}

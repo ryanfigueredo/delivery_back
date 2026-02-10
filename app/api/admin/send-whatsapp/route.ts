@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { phone, message } = body;
+    const { phone, message, attendant_name: attendantName } = body;
     if (!phone || !message) {
       return NextResponse.json(
         { success: false, error: "phone e message são obrigatórios" },
@@ -132,6 +132,20 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.error("[SendWhatsApp] Erro ao incrementar uso:", error);
         // Não falha a operação, apenas loga
+      }
+      // Persistir no histórico do atendimento (inbox)
+      try {
+        const { storeBotMessage } = await import("@/lib/bot-messages");
+        await storeBotMessage({
+          tenantId,
+          phoneNumberId: phoneNumberId!,
+          customerPhone: whatsappPhone,
+          direction: "out",
+          body: String(message).slice(0, 4096),
+          attendantName: attendantName ?? null,
+        });
+      } catch (storeErr) {
+        console.error("[SendWhatsApp] Erro ao salvar no histórico:", storeErr);
       }
     }
 

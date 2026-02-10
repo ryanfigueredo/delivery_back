@@ -519,6 +519,28 @@ async function processWebhookPayload(body: Record<string, unknown>) {
             effectivePhoneId
           );
 
+          // Persistir mensagem recebida para histórico do atendimento (inbox)
+          try {
+            const { getTenantIdFromConfig, storeBotMessage } = await import(
+              "@/lib/bot-messages"
+            );
+            const tenantId = await getTenantIdFromConfig(
+              clientConfig.tenant_slug ?? undefined,
+              clientConfig.tenant_api_key ?? undefined
+            );
+            if (tenantId) {
+              await storeBotMessage({
+                tenantId,
+                phoneNumberId: effectivePhoneId,
+                customerPhone: from,
+                direction: "in",
+                body: messageText,
+              });
+            }
+          } catch (storeErr) {
+            console.error("[Webhook] Erro ao salvar mensagem (in):", storeErr);
+          }
+
           // Fluxo Restaurante (Tamboril): cardápio dinâmico, pedidos, Order no banco
           const isRestaurante = isRestauranteConfig(clientConfig);
           if (isRestaurante) {
@@ -658,6 +680,27 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                   effectivePhoneId,
                   token
                 );
+                const bodyOut =
+                  (result.interactive as { body?: { text?: string } })?.body
+                    ?.text ?? "[opções]";
+                try {
+                  const { getTenantIdFromConfig, storeBotMessage } = await import(
+                    "@/lib/bot-messages"
+                  );
+                  const tenantId = await getTenantIdFromConfig(
+                    clientConfig.tenant_slug ?? undefined,
+                    clientConfig.tenant_api_key ?? undefined
+                  );
+                  if (tenantId) {
+                    await storeBotMessage({
+                      tenantId,
+                      phoneNumberId: effectivePhoneId,
+                      customerPhone: from,
+                      direction: "out",
+                      body: bodyOut,
+                    });
+                  }
+                } catch (_) {}
               } else if (result?.reply) {
                 const token = clientConfig.token_api_meta;
                 console.log(
@@ -671,6 +714,24 @@ async function processWebhookPayload(body: Record<string, unknown>) {
                   effectivePhoneId,
                   token
                 );
+                try {
+                  const { getTenantIdFromConfig, storeBotMessage } = await import(
+                    "@/lib/bot-messages"
+                  );
+                  const tenantId = await getTenantIdFromConfig(
+                    clientConfig.tenant_slug ?? undefined,
+                    clientConfig.tenant_api_key ?? undefined
+                  );
+                  if (tenantId) {
+                    await storeBotMessage({
+                      tenantId,
+                      phoneNumberId: effectivePhoneId,
+                      customerPhone: from,
+                      direction: "out",
+                      body: result.reply,
+                    });
+                  }
+                } catch (_) {}
               }
             } catch (err) {
               console.error("[Webhook] Erro handlers-restaurante:", err);
@@ -697,6 +758,24 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               effectivePhoneId,
               clientConfig.token_api_meta
             );
+            try {
+              const { getTenantIdFromConfig, storeBotMessage } = await import(
+                "@/lib/bot-messages"
+              );
+              const tid = await getTenantIdFromConfig(
+                clientConfig.tenant_slug ?? undefined,
+                clientConfig.tenant_api_key ?? undefined
+              );
+              if (tid) {
+                await storeBotMessage({
+                  tenantId: tid,
+                  phoneNumberId: effectivePhoneId,
+                  customerPhone: from,
+                  direction: "out",
+                  body: reply,
+                });
+              }
+            } catch (_) {}
             continue;
           }
 
@@ -710,7 +789,24 @@ async function processWebhookPayload(body: Record<string, unknown>) {
             effectivePhoneId,
             clientConfig.token_api_meta
           );
-
+          try {
+            const { getTenantIdFromConfig, storeBotMessage } = await import(
+              "@/lib/bot-messages"
+            );
+            const tid = await getTenantIdFromConfig(
+              clientConfig.tenant_slug ?? undefined,
+              clientConfig.tenant_api_key ?? undefined
+            );
+            if (tid) {
+              await storeBotMessage({
+                tenantId: tid,
+                phoneNumberId: effectivePhoneId,
+                customerPhone: from,
+                direction: "out",
+                body: text,
+              });
+            }
+          } catch (_) {}
           if (sendList && (clientConfig.options || []).length > 0) {
             const listBody =
               "Como posso ajudar? Toque no botão abaixo para escolher:";
@@ -722,6 +818,24 @@ async function processWebhookPayload(body: Record<string, unknown>) {
               effectivePhoneId,
               clientConfig.token_api_meta
             );
+            try {
+              const { getTenantIdFromConfig, storeBotMessage } = await import(
+                "@/lib/bot-messages"
+              );
+              const tid = await getTenantIdFromConfig(
+                clientConfig.tenant_slug ?? undefined,
+                clientConfig.tenant_api_key ?? undefined
+              );
+              if (tid) {
+                await storeBotMessage({
+                  tenantId: tid,
+                  phoneNumberId: effectivePhoneId,
+                  customerPhone: from,
+                  direction: "out",
+                  body: listBody,
+                });
+              }
+            } catch (_) {}
           }
         }
       }

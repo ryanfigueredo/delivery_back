@@ -74,6 +74,7 @@ model Tenant {
   users       User[]
   message_usage MessageUsage[]
   whatsapp_messages WhatsAppMessage[]
+  bot_messages BotMessage[]
 
   @@map("tenants")
 }
@@ -175,4 +176,23 @@ model WhatsAppMessage {
   @@index([tenant_id, category])
   @@index([tenant_id, category, created_at])
   @@map("whatsapp_messages")
+}
+
+// Mensagens do bot WhatsApp por conversa (inbox atendimento + histórico)
+model BotMessage {
+  id             String   @id @default(uuid())
+  tenant_id      String
+  phone_number_id String? // Meta Phone Number ID
+  customer_phone String   // Telefone do cliente (apenas dígitos)
+  direction      String   // "in" | "out"
+  body           String   @db.Text
+  wamid          String?  // ID da mensagem na Meta (evitar duplicata)
+  attendant_name String?  // Nome do atendente (quando direction = out e foi enviado pelo painel)
+  created_at     DateTime @default(now())
+
+  tenant         Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, customer_phone])
+  @@index([tenant_id, customer_phone, created_at])
+  @@map("bot_messages")
 }

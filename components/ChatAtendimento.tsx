@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 export interface ChatMessage {
   id: string;
@@ -13,27 +13,59 @@ export interface ChatMessage {
 interface ChatAtendimentoProps {
   phone: string;
   phoneFormatted: string;
-  waitTime: number;
+  waitTime?: number;
   onClose?: () => void;
 }
 
 export function ChatAtendimento({
   phone,
   phoneFormatted,
-  waitTime,
+  waitTime = 0,
   onClose,
 }: ChatAtendimentoProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "0",
-      text: "Cliente pediu atendimento humano pelo bot.",
-      isAttendant: false,
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const fetchMessages = useCallback(async () => {
+    const p = phone.replace(/\D/g, "");
+    const query = p.length >= 10 ? (p.startsWith("55") ? p : `55${p}`) : p;
+    if (!query) return;
+    try {
+      const res = await fetch(
+        `/api/admin/inbox/conversations/${encodeURIComponent(query)}?_=${Date.now()}`,
+        { credentials: "same-origin" }
+      );
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.messages)) {
+        setMessages(
+          data.messages.map((m: { id: string; body: string; direction: string; created_at: string }) => ({
+            id: m.id,
+            text: m.body,
+            isAttendant: m.direction === "out",
+            timestamp: new Date(m.created_at),
+            status: "sent" as const,
+          }))
+        );
+      }
+    } catch (_) {
+      setMessages([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [phone]);
+
+  useEffect(() => {
+    setLoadingHistory(true);
+    fetchMessages();
+  }, [fetchMessages]);
+
+  useEffect(() => {
+    const interval = setInterval(fetchMessages, 3000);
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -75,6 +107,7 @@ export function ChatAtendimento({
             msg.id === tempId ? { ...msg, status: "sent" as const } : msg
           )
         );
+        fetchMessages();
       } else {
         setMessages((m) =>
           m.map((msg) =>
@@ -132,9 +165,7 @@ export function ChatAtendimento({
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold truncate text-gray-900">{phoneFormatted}</p>
-          <p className="text-xs text-gray-500">
-            Aguardando {waitTime < 1 ? "agora" : `${waitTime} min`}
-          </p>
+          <p className="text-xs text-gray-500">Histórico da conversa</p>
         </div>
       </div>
 
@@ -143,6 +174,14 @@ export function ChatAtendimento({
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-2 bg-primary-50"
       >
+        {loadingHistory && (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent" />
+          </div>
+        )}
+        {!loadingHistory && messages.length === 0 && (
+          <p className="text-center text-gray-500 text-sm py-4">Nenhuma mensagem ainda. Envie a primeira!</p>
+        )}
         {messages.map((msg) => (
           <div
             key={msg.id}
