@@ -42,11 +42,17 @@ setInterval(() => {
 }, 60000); // Limpar a cada minuto
 
 export function middleware(request: NextRequest) {
+  // Redirecionar URL sem hífen para a rota correta
+  if (request.nextUrl.pathname === "/politicaprivacidade") {
+    return NextResponse.redirect(new URL("/politica-privacidade", request.url));
+  }
+
   const sessionCookie = request.cookies.get("session");
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
   const isSuportePage = request.nextUrl.pathname.startsWith("/suporte");
   const isPrivacidadePage =
     request.nextUrl.pathname.startsWith("/privacidade") ||
+    request.nextUrl.pathname.startsWith("/politica-privacidade") ||
     request.nextUrl.pathname.startsWith("/politicaprivacidade") ||
     request.nextUrl.pathname.startsWith("/opcoes-privacidade");
   const isHomePage = request.nextUrl.pathname === "/";
