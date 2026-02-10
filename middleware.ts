@@ -45,9 +45,12 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get("session");
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
   const isSuportePage = request.nextUrl.pathname.startsWith("/suporte");
-  const isPrivacidadePage = request.nextUrl.pathname.startsWith("/privacidade");
+  const isPrivacidadePage = request.nextUrl.pathname.startsWith("/privacidade") || 
+                            request.nextUrl.pathname.startsWith("/politica-privacidade") ||
+                            request.nextUrl.pathname.startsWith("/opcoes-privacidade");
   const isHomePage = request.nextUrl.pathname === "/";
   const isVendasPage = request.nextUrl.pathname === "/vendas";
+  const isCheckoutPage = request.nextUrl.pathname.startsWith("/checkout");
   const isApiAuth = request.nextUrl.pathname.startsWith("/api/auth");
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const isWebhook =
@@ -67,13 +70,14 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Permitir acesso às páginas públicas (home, vendas, login, suporte, privacidade) e APIs
+  // Permitir acesso às páginas públicas (home, vendas, login, suporte, privacidade, checkout) e APIs
   if (
     isHomePage ||
     isVendasPage ||
     isAuthPage ||
     isSuportePage ||
     isPrivacidadePage ||
+    isCheckoutPage ||
     isApiAuth ||
     isApiRoute
   ) {
