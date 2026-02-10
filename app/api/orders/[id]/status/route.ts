@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateApiKey } from '@/lib/auth'
+import { sendDeliveryNotification } from '@/lib/notify-delivery'
 
 /**
- * API para atualizar status do pedido
- * Usado pelo app Android para confirmar impressão
+ * API para atualizar status do pedido.
+ * Usado pelo app Android/iOS para impressão e "saiu para entrega".
+ * Ao marcar como out_for_delivery, envia notificação ao cliente via bot WhatsApp.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // Validação de API_KEY (opcional para impressão)
   const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
@@ -30,7 +31,6 @@ export async function PATCH(
       )
     }
 
-    // Verifica se o pedido existe
     const existingOrder = await prisma.order.findUnique({
       where: { id: orderId },
     })
@@ -38,26 +38,28 @@ export async function PATCH(
     if (!existingOrder) {
       const responseTime = Date.now() - startTime
       console.log(`[UPDATE-STATUS] Pedido não encontrado - ID: ${orderId} - Tempo: ${responseTime}ms`)
-      
       return NextResponse.json(
         { message: 'Pedido não encontrado' },
         { status: 404 }
       )
     }
 
-    // Atualiza o status do pedido
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: { status: status as any },
     })
 
     const responseTime = Date.now() - startTime
-    
-    console.log(`[UPDATE-STATUS] Pedido atualizado`)
-    console.log(`  - ID: ${orderId}`)
-    console.log(`  - Status anterior: ${existingOrder.status}`)
-    console.log(`  - Status novo: ${updatedOrder.status}`)
-    console.log(`  - Tempo: ${responseTime}ms`)
+    console.log(`[UPDATE-STATUS] Pedido atualizado - ID: ${orderId} - ${existingOrder.status} -> ${updatedOrder.status} - ${responseTime}ms`)
+
+    // Ao marcar como "saiu para entrega", notificar cliente via bot WhatsApp
+    if (status === 'out_for_delivery') {
+      sendDeliveryNotification(updatedOrder).then((result) => {
+        if (!result.sent) {
+          console.warn(`[UPDATE-STATUS] Notificação de entrega não enviada para ${orderId}:`, result.error)
+        }
+      })
+    }
 
     return NextResponse.json(
       {

@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateApiKey } from '@/lib/auth'
-import { checkMessageLimit, incrementMessageUsage } from '@/lib/message-limits'
+import { sendDeliveryNotification } from '@/lib/notify-delivery'
 
 /**
- * API para notificar cliente via WhatsApp quando pedido sair para entrega
- * Esta API será chamada pelo app Android após marcar pedido como "out_for_delivery"
- * 
- * A mensagem será enviada via webhook para o bot WhatsApp
+ * API para notificar cliente via WhatsApp quando pedido sair para entrega.
+ * Chamada opcional após marcar pedido como "out_for_delivery".
+ * O PATCH /api/orders/[id]/status já dispara a notificação automaticamente.
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // Validação de API_KEY
   const authValidation = await validateApiKey(request)
   if (!authValidation.isValid) {
     return authValidation.response!
@@ -21,10 +19,6 @@ export async function POST(
 
   try {
     const orderId = params.id
-    const body = await request.json()
-    const { message } = body // Mensagem customizada (opcional)
-
-    // Buscar pedido
     const order = await prisma.order.findUnique({
       where: { id: orderId }
     })
@@ -43,92 +37,22 @@ export async function POST(
       )
     }
 
-    // Verificar limite de mensagens
-    try {
-      const limitCheck = await checkMessageLimit(order.tenant_id)
-      if (!limitCheck.allowed) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Limite de mensagens excedido. Plano: ${limitCheck.planName} (${limitCheck.current}/${limitCheck.limit} mensagens usadas).`,
-            limit_info: {
-              current: limitCheck.current,
-              limit: limitCheck.limit,
-              plan: limitCheck.planName
-            }
-          },
-          { status: 429 }
-        )
-      }
-    } catch (error) {
-      console.error('[NotifyDelivery] Erro ao verificar limite:', error)
-      // Não bloqueia se houver erro na verificação
+    const result = await sendDeliveryNotification(order)
+
+    if (!result.sent && result.error?.includes('Limite')) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 429 }
+      )
     }
 
-    // Preparar mensagem para o cliente
-    const displayId = order.display_id || `#${order.daily_sequence?.toString().padStart(3, '0') || '000'}`
-    const mensagemPadrao = `🚚 *PEDIDO ${displayId} SAIU PARA ENTREGA!*
-
-Olá ${order.customer_name}! 👋
-
-Seu pedido ${displayId} acabou de sair para entrega e está a caminho!
-
-${order.order_type === 'delivery' && order.delivery_address 
-  ? `📍 Endereço: ${order.delivery_address}\n` 
-  : ''}Em breve chegará até você!
-
-Obrigado por escolher Pedidos Express! ❤️`
-
-    const mensagemFinal = message || mensagemPadrao
-
-    // Enviar mensagem via API do bot (Railway)
-    // O bot tem um servidor Express que recebe comandos de envio
-    try {
-      // Formatar telefone para WhatsApp
-      let whatsappPhone = order.customer_phone.replace(/\D/g, '')
-      if (!whatsappPhone.startsWith('55') && whatsappPhone.length === 11) {
-        whatsappPhone = `55${whatsappPhone}`
-      }
-      const formattedPhone = `${whatsappPhone}@s.whatsapp.net`
-      
-      const botApiUrl = process.env.BOT_API_URL || 'https://web-production-0e9c9.up.railway.app/api/bot/send-message'
-      
-      const botResponse = await fetch(botApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          message: mensagemFinal
-        })
-      })
-
-      if (botResponse.ok) {
-        console.log(`✅ Mensagem de entrega enviada para ${order.customer_phone}`)
-        // Incrementar contador de mensagens
-        try {
-          await incrementMessageUsage(order.tenant_id, 1)
-        } catch (error) {
-          console.error('[NotifyDelivery] Erro ao incrementar uso:', error)
-        }
-      } else {
-        console.warn('Bot API não respondeu, mas pedido foi marcado como saiu')
-      }
-    } catch (error) {
-      console.error('Erro ao chamar bot API:', error)
-      // Não falha a operação, apenas loga o erro
-      // O bot pode buscar mensagens pendentes via polling também
-    }
-
-    // Retornar sucesso
+    const displayId = order.display_id || `#${(order.daily_sequence?.toString().padStart(3, '0') || '000')}`
     return NextResponse.json({
       success: true,
       order_id: order.id,
       customer_phone: order.customer_phone,
       display_id: displayId,
-      message: mensagemFinal,
-      note: 'Mensagem enviada ao bot WhatsApp para notificar cliente'
+      note: result.sent ? 'Mensagem enviada ao bot WhatsApp' : (result.error || 'Envio não realizado')
     }, { status: 200 })
   } catch (error) {
     console.error('Erro ao preparar notificação de entrega:', error)

@@ -248,17 +248,14 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ Tenant identificado:", tenantId);
 
-    // Opcional: validar API_KEY para admin (pode remover se quiser público)
-    const apiKeyHeader = request.headers.get("X-API-Key");
-    const isAdmin = apiKeyHeader === process.env.API_KEY;
-
     // Paginação
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
 
-    // Contar total de pedidos do tenant - com tratamento de erro
+    // Buscar todos os pedidos do tenant (todos os status) para app e dashboard
+    // assim Rota (out_for_delivery) e Entregues (finished) aparecem no app
     let total = 0;
     let orders: any[] = [];
 
@@ -266,27 +263,12 @@ export async function GET(request: NextRequest) {
       total = await prisma.order.count({
         where: {
           tenant_id: tenantId,
-          ...(isAdmin
-            ? {}
-            : {
-                status: {
-                  in: ["pending", "printed"],
-                },
-              }),
         },
       });
 
       orders = await prisma.order.findMany({
         where: {
           tenant_id: tenantId,
-          // Se for admin, mostra todos os status. Se não, só pending/printed
-          ...(isAdmin
-            ? {}
-            : {
-                status: {
-                  in: ["pending", "printed"],
-                },
-              }),
         },
         orderBy: {
           created_at: "desc", // Mais recentes primeiro
