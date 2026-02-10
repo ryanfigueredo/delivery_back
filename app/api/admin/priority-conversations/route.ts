@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Buscar conversas prioritárias do DynamoDB (persistido pelo bot)
+    // Buscar conversas prioritárias do DynamoDB (persistido pelo webhook Meta)
     const phoneNumberId = process.env.PHONE_NUMBER_ID || null;
     let rawConversations: Array<{
       remetente: string;
@@ -56,26 +56,25 @@ export async function GET(request: NextRequest) {
       rawConversations = await listPriorityConversations(phoneNumberId);
     } catch (fetchError: any) {
       console.error(
-        "Erro ao buscar conversas prioritárias:",
+        "Erro ao buscar conversas prioritárias (DynamoDB):",
         fetchError?.message
-      );
-      return NextResponse.json(
-        { conversations: [], total: 0 },
-        { status: 200 }
       );
     }
 
-    // Formatar dados para o app
-    const conversations = (rawConversations || []).map((conv: any) => ({
+    // Formatar dados para o app (ordem: mais recente primeiro)
+    const formatted = (rawConversations || []).map((conv: any) => ({
       phone: conv.remetente || conv.phone,
       phoneFormatted: formatPhoneForDisplay(conv.remetente || conv.phone),
       whatsappUrl: `https://wa.me/${formatPhoneForWhatsApp(
         conv.remetente || conv.phone
       )}`,
-      waitTime: conv.tempoEsperaMin ?? conv.tempoEspera ?? 0, // minutos
+      waitTime: conv.tempoEsperaMin ?? conv.tempoEspera ?? 0,
       timestamp: conv.timestamp || Date.now(),
       lastMessage: conv.ultimaMensagem || conv.timestamp || Date.now(),
     }));
+    const conversations = formatted.sort(
+      (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
+    );
 
     return NextResponse.json(
       {

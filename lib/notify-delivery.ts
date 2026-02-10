@@ -13,7 +13,7 @@ type OrderForNotify = {
 }
 
 /**
- * Envia notificação de "saiu para entrega" ao cliente via bot WhatsApp.
+ * Envia notificação de "saiu para entrega" ao cliente via Meta WhatsApp (Cloud API).
  * Usado pelo POST /api/orders/[id]/notify-delivery e pelo PATCH /api/orders/[id]/status
  * quando o status é atualizado para out_for_delivery.
  */
@@ -48,24 +48,36 @@ ${order.order_type === 'delivery' && order.delivery_address
 
 Obrigado por escolher Pedidos Express! ❤️`
 
+  let whatsappPhone = order.customer_phone.replace(/\D/g, '')
+  if (!whatsappPhone.startsWith('55') && whatsappPhone.length >= 10) {
+    whatsappPhone = `55${whatsappPhone}`
+  }
+
+  const token = process.env.TOKEN_API_META
+  const phoneNumberId = process.env.PHONE_NUMBER_ID
+  const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0'
+
+  if (!token || !phoneNumberId) {
+    return { sent: false, error: 'TOKEN_API_META e PHONE_NUMBER_ID não configurados (Meta WhatsApp)' }
+  }
+
   try {
-    let whatsappPhone = order.customer_phone.replace(/\D/g, '')
-    if (!whatsappPhone.startsWith('55') && whatsappPhone.length === 11) {
-      whatsappPhone = `55${whatsappPhone}`
-    }
-    const formattedPhone = `${whatsappPhone}@s.whatsapp.net`
-    const botApiUrl = process.env.BOT_API_URL || 'https://web-production-0e9c9.up.railway.app/api/bot/send-message'
-
-    const botResponse = await fetch(botApiUrl, {
+    const url = `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        phone: formattedPhone,
-        message: mensagem
-      })
+        messaging_product: 'whatsapp',
+        to: whatsappPhone,
+        type: 'text',
+        text: { body: mensagem.slice(0, 4096) },
+      }),
     })
-
-    if (botResponse.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+    if (res.ok) {
       console.log(`✅ Mensagem de entrega enviada para ${order.customer_phone} (pedido ${order.id})`)
       try {
         await incrementMessageUsage(order.tenant_id, 1)
@@ -74,9 +86,9 @@ Obrigado por escolher Pedidos Express! ❤️`
       }
       return { sent: true }
     }
-    return { sent: false, error: `Bot API respondeu com status ${botResponse.status}` }
+    return { sent: false, error: data?.error?.message || `Meta API ${res.status}` }
   } catch (error) {
-    console.error('[NotifyDelivery] Erro ao chamar bot API:', error)
+    console.error('[NotifyDelivery] Erro Meta API:', error)
     return { sent: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
