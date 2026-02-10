@@ -45,9 +45,10 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get("session");
   const isAuthPage = request.nextUrl.pathname.startsWith("/login");
   const isSuportePage = request.nextUrl.pathname.startsWith("/suporte");
-  const isPrivacidadePage = request.nextUrl.pathname.startsWith("/privacidade") || 
-                            request.nextUrl.pathname.startsWith("/politica-privacidade") ||
-                            request.nextUrl.pathname.startsWith("/opcoes-privacidade");
+  const isPrivacidadePage =
+    request.nextUrl.pathname.startsWith("/privacidade") ||
+    request.nextUrl.pathname.startsWith("/politicaprivacidade") ||
+    request.nextUrl.pathname.startsWith("/opcoes-privacidade");
   const isHomePage = request.nextUrl.pathname === "/";
   const isVendasPage = request.nextUrl.pathname === "/vendas";
   const isCheckoutPage = request.nextUrl.pathname.startsWith("/checkout");
@@ -65,7 +66,7 @@ export function middleware(request: NextRequest) {
           error: "Too Many Requests",
           message: "Rate limit exceeded. Please try again later.",
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
   }
