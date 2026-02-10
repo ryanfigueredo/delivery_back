@@ -5,7 +5,7 @@
 import { prisma } from "@/lib/prisma";
 
 export async function getTenantIdFromConfig(slug?: string | null, apiKey?: string | null): Promise<string | null> {
-  if (!slug && !apiKey) return null;
+  if (!slug && !apiKey) return getFirstTenantId();
   try {
     const tenant = await prisma.tenant.findFirst({
       where: {
@@ -15,6 +15,19 @@ export async function getTenantIdFromConfig(slug?: string | null, apiKey?: strin
         ].filter(Boolean) as Array<{ slug?: string; api_key?: string }>,
         is_active: true,
       },
+      select: { id: true },
+    });
+    return tenant?.id ?? getFirstTenantId();
+  } catch {
+    return getFirstTenantId();
+  }
+}
+
+/** Primeiro tenant ativo (para single-tenant: sempre salvar mensagem no inbox). */
+export async function getFirstTenantId(): Promise<string | null> {
+  try {
+    const tenant = await prisma.tenant.findFirst({
+      where: { is_active: true },
       select: { id: true },
     });
     return tenant?.id ?? null;

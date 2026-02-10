@@ -519,7 +519,7 @@ async function processWebhookPayload(body: Record<string, unknown>) {
             effectivePhoneId
           );
 
-          // Persistir mensagem recebida para histórico do atendimento (inbox)
+          // Persistir mensagem recebida para histórico do atendimento (inbox) — toda conversa aparece no app
           try {
             const { getTenantIdFromConfig, storeBotMessage } = await import(
               "@/lib/bot-messages"
