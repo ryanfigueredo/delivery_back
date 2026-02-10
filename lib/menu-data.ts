@@ -1,6 +1,10 @@
 /**
  * Dados do cardápio - compartilhado entre admin e bot.
  * Futuramente migrar para banco (model MenuItem com tenant_id).
+ *
+ * Onde alterar nomes (ex: "Hambúrguer Bovino Simples"):
+ * - Este arquivo: edite o array MENU_ITEMS abaixo (nome correto: "Simples", não "simple").
+ * - Admin: PUT /api/admin/menu altera em memória; alterações se perdem ao reiniciar o servidor.
  */
 
 export interface MenuItemData {
