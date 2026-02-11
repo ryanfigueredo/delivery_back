@@ -3,6 +3,39 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getAuthUser } from "@/lib/auth";
 
+/** Obtém tenant_id para autorização: sessão/Basic Auth ou X-API-Key/X-Tenant-Id (app mobile). */
+async function getTenantIdForOrder(
+  request: NextRequest
+): Promise<string | null> {
+  const authUser = await getAuthUser(request);
+  if (authUser?.tenant_id) return authUser.tenant_id;
+  const apiKey =
+    request.headers.get("x-api-key") || request.headers.get("X-API-Key");
+  if (apiKey) {
+    try {
+      const { getTenantByApiKey } = await import("@/lib/tenant");
+      const tenant = await getTenantByApiKey(apiKey);
+      if (tenant) return tenant.id;
+    } catch (_) {}
+  }
+  const tenantIdHeader =
+    request.headers.get("x-tenant-id") || request.headers.get("X-Tenant-Id");
+  if (tenantIdHeader) {
+    if (
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        tenantIdHeader
+      )
+    )
+      return tenantIdHeader;
+    try {
+      const { getTenantByApiKey } = await import("@/lib/tenant");
+      const tenant = await getTenantByApiKey(tenantIdHeader);
+      if (tenant) return tenant.id;
+    } catch (_) {}
+  }
+  return null;
+}
+
 /**
  * GET - Retorna um pedido por ID (para impressão no desktop)
  */
@@ -12,8 +45,8 @@ export async function GET(
 ) {
   const { id: orderId } = await params;
   try {
-    const authUser = await getAuthUser(request);
-    if (!authUser) {
+    const tenantId = await getTenantIdForOrder(request);
+    if (!tenantId) {
       return NextResponse.json(
         { success: false, error: "Não autenticado" },
         { status: 401 }
@@ -28,7 +61,7 @@ export async function GET(
         { status: 404 }
       );
     }
-    if (authUser.tenant_id && order.tenant_id !== authUser.tenant_id) {
+    if (order.tenant_id !== tenantId) {
       return NextResponse.json(
         { success: false, error: "Acesso negado" },
         { status: 403 }
@@ -72,8 +105,8 @@ export async function PATCH(
   const { id: orderId } = await params;
 
   try {
-    const authUser = await getAuthUser(request);
-    if (!authUser) {
+    const tenantId = await getTenantIdForOrder(request);
+    if (!tenantId) {
       return NextResponse.json(
         { success: false, error: "Não autenticado" },
         { status: 401 }
@@ -94,8 +127,7 @@ export async function PATCH(
       );
     }
 
-    // Verificar se usuário tem acesso ao tenant do pedido
-    if (authUser.tenant_id && existingOrder.tenant_id !== authUser.tenant_id) {
+    if (existingOrder.tenant_id !== tenantId) {
       return NextResponse.json(
         { success: false, error: "Acesso negado a este pedido" },
         { status: 403 }

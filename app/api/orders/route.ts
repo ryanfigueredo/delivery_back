@@ -1,8 +1,95 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 // Forçar rota dinâmica (não pode ser renderizada estaticamente)
 export const dynamic = "force-dynamic";
+
+/** Obtém tenant_id a partir dos headers (Basic Auth, X-Tenant-Id, X-API-Key). Usado por GET e POST. */
+async function getTenantIdFromRequest(
+  request: NextRequest
+): Promise<string | null> {
+  let tenantId: string | null = null;
+  const authHeader =
+    request.headers.get("authorization") ||
+    request.headers.get("Authorization");
+  if (authHeader?.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.split(" ")[1];
+      const credentials = Buffer.from(base64Credentials, "base64").toString(
+        "utf-8"
+      );
+      const [username, password] = credentials.split(":");
+      if (username && password) {
+        const { verifyCredentials } = await import("@/lib/auth-session");
+        const user = await verifyCredentials(username, password);
+        if (user?.tenant_id) tenantId = user.tenant_id;
+        else if (user) {
+          const users = await prisma.$queryRawUnsafe<
+            Array<{ tenant_id: string | null }>
+          >(`SELECT tenant_id FROM users WHERE id = $1 LIMIT 1`, user.id);
+          if (users.length > 0 && users[0].tenant_id)
+            tenantId = users[0].tenant_id;
+          else {
+            const slug =
+              request.headers.get("x-tenant-id") || "tamboril-burguer";
+            const tenants = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+              `SELECT id FROM tenants WHERE slug = $1 LIMIT 1`,
+              slug
+            );
+            if (tenants.length > 0) tenantId = tenants[0].id;
+          }
+        }
+      }
+    } catch (_) {}
+  }
+  if (!tenantId) {
+    const tenantIdHeader =
+      request.headers.get("x-tenant-id") ||
+      request.headers.get("X-Tenant-Id");
+    if (tenantIdHeader) {
+      if (
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          tenantIdHeader
+        )
+      ) {
+        tenantId = tenantIdHeader;
+      } else {
+        try {
+          const { getTenantByApiKey } = await import("@/lib/tenant");
+          const tenant = await getTenantByApiKey(tenantIdHeader);
+          if (tenant) tenantId = tenant.id;
+          else {
+            const tenants = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+              `SELECT id FROM tenants WHERE slug = $1 LIMIT 1`,
+              tenantIdHeader
+            );
+            if (tenants.length > 0) tenantId = tenants[0].id;
+          }
+        } catch (_) {}
+      }
+    } else {
+      const apiKey =
+        request.headers.get("x-api-key") || request.headers.get("X-API-Key");
+      if (apiKey) {
+        try {
+          const { getTenantByApiKey } = await import("@/lib/tenant");
+          const tenant = await getTenantByApiKey(apiKey);
+          if (tenant) tenantId = tenant.id;
+        } catch (_) {}
+      }
+    }
+  }
+  if (!tenantId) {
+    try {
+      const defaultTenants = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+        `SELECT id FROM tenants WHERE slug = 'tamboril-burguer' LIMIT 1`
+      );
+      if (defaultTenants.length > 0) tenantId = defaultTenants[0].id;
+    } catch (_) {}
+  }
+  return tenantId;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -397,6 +484,204 @@ export async function GET(request: NextRequest) {
         },
       },
       { status: 200 }
+    );
+  }
+}
+
+/** Sanitiza itens para criação de pedido (local ou webhook). */
+function sanitizeOrderItems(items: unknown): Array<{ id: string; name: string; quantity: number; price: number }> {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  return items.map((item: any, index: number) => {
+    const id =
+      item?.id != null ? String(item.id).trim().substring(0, 100) || `item-${index}` : `item-${index}`;
+    const name = String(item?.name ?? item?.nome ?? "").trim().substring(0, 500) || `Item ${index + 1}`;
+    const quantity = Math.max(
+      1,
+      Math.min(1000, Math.floor(Number(item?.quantity ?? item?.quantidade ?? 1)) || 1)
+    );
+    const price = Math.max(
+      0,
+      Math.min(999999.99, Number(item?.price ?? item?.preco ?? 0) || 0)
+    );
+    return { id, name, quantity, price };
+  });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const tenantId = await getTenantIdFromRequest(request);
+    if (!tenantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Tenant não identificado. Use X-Tenant-Id, X-API-Key ou Basic Auth.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const customerName = String(body?.customer_name ?? "").trim().substring(0, 200);
+    if (!customerName) {
+      return NextResponse.json(
+        { success: false, error: "Nome do cliente é obrigatório." },
+        { status: 400 }
+      );
+    }
+
+    const rawItems = body?.items;
+    const items = sanitizeOrderItems(rawItems);
+    if (items.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Informe ao menos um item no pedido." },
+        { status: 400 }
+      );
+    }
+
+    const totalPrice =
+      typeof body?.total_price === "number"
+        ? body.total_price
+        : parseFloat(body?.total_price);
+    if (!Number.isFinite(totalPrice) || totalPrice < 0) {
+      return NextResponse.json(
+        { success: false, error: "Preço total inválido." },
+        { status: 400 }
+      );
+    }
+
+    let normalizedPhone = String(body?.customer_phone ?? "")
+      .replace(/\D/g, "")
+      .substring(0, 20);
+    if (normalizedPhone.startsWith("55") && normalizedPhone.length > 11) {
+      normalizedPhone = normalizedPhone.substring(2);
+    }
+    if (!normalizedPhone) normalizedPhone = "local";
+
+    const paymentMethod =
+      String(body?.payment_method ?? "Não especificado").trim().substring(0, 100);
+    const orderType =
+      String(body?.order_type ?? "restaurante").trim().substring(0, 50);
+    const deliveryAddress =
+      body?.delivery_address != null
+        ? String(body.delivery_address).trim().substring(0, 500)
+        : null;
+
+    const ordersFromPhone = await prisma.order.count({
+      where: {
+        customer_phone: normalizedPhone,
+        tenant_id: tenantId,
+      },
+    });
+    const orderNumber = ordersFromPhone + 1;
+    const customerTotalOrders = ordersFromPhone + 1;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dailySequence =
+      (await prisma.order.count({
+        where: {
+          tenant_id: tenantId,
+          created_at: { gte: today, lt: tomorrow },
+        },
+      })) + 1;
+    const displayId = `#${String(dailySequence).padStart(3, "0")}`;
+    const estimatedTime = dailySequence * 20;
+
+    const order = await prisma.order.create({
+      data: {
+        tenant_id: tenantId,
+        customer_name: customerName,
+        customer_phone: normalizedPhone,
+        items: items as unknown as Prisma.InputJsonValue,
+        total_price: new Prisma.Decimal(Math.max(0, Math.min(999999.99, totalPrice))),
+        status: "pending",
+        payment_method: paymentMethod,
+        order_number: orderNumber,
+        daily_sequence: dailySequence,
+        display_id: displayId,
+        customer_total_orders: customerTotalOrders,
+        order_type: orderType,
+        estimated_time: estimatedTime,
+        delivery_address: deliveryAddress,
+      },
+    });
+
+    let itemsFormatted = order.items as any[];
+    if (typeof order.items === "string") {
+      try {
+        itemsFormatted = JSON.parse(order.items as string);
+      } catch {
+        itemsFormatted = [];
+      }
+    }
+    if (!Array.isArray(itemsFormatted)) itemsFormatted = [];
+
+    const rawTotal = order.total_price;
+    let totalNum = 0;
+    if (typeof rawTotal === "string") totalNum = parseFloat(rawTotal);
+    else if (rawTotal && typeof rawTotal === "object" && "toNumber" in rawTotal)
+      totalNum = (rawTotal as any).toNumber();
+    else if (typeof rawTotal === "number") totalNum = rawTotal;
+
+    return NextResponse.json(
+      {
+        success: true,
+        order: {
+          id: order.id,
+          customer_name: order.customer_name,
+          customer_phone: order.customer_phone,
+          items: itemsFormatted.map((item: any) => ({
+            id: item.id || item.name,
+            name: item.name,
+            quantity: item.quantity || 1,
+            price:
+              typeof item.price === "string"
+                ? parseFloat(item.price)
+                : item.price,
+          })),
+          total_price: totalNum,
+          status: order.status,
+          created_at: order.created_at.toISOString(),
+          display_id: order.display_id,
+          daily_sequence: order.daily_sequence,
+          order_type: order.order_type,
+          delivery_address: order.delivery_address,
+          payment_method: order.payment_method,
+          estimated_time: order.estimated_time,
+          print_requested_at: (order as any).print_requested_at?.toISOString?.() ?? null,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("Erro ao criar pedido (POST /api/orders):", error);
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { success: false, error: "Erro de duplicação no banco." },
+        { status: 409 }
+      );
+    }
+    if (error?.code === "P2003") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Tenant ou referência inválida. Verifique se o tenant existe.",
+        },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erro ao criar pedido.",
+        details:
+          process.env.NODE_ENV === "development" ? String(error?.message) : undefined,
+      },
+      { status: 500 }
     );
   }
 }

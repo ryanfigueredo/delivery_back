@@ -62,14 +62,30 @@ export async function GET(request: NextRequest) {
       tenantId = user.tenant_id
       isSuperAdmin = !tenantId
     } else if (authValidation.isValid && authValidation.tenant) {
-      // Autenticação por API key (app mobile sem login - fallback)
       tenantId = authValidation.tenant.id
       isSuperAdmin = false
     } else {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      )
+      // Fallback: tentar X-Tenant-Id (slug ou UUID) como no app de pedidos
+      const tenantIdHeader = request.headers.get('x-tenant-id') || request.headers.get('X-Tenant-Id')
+      if (tenantIdHeader) {
+        const { getTenantBySlug } = await import('@/lib/tenant')
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantIdHeader)
+        if (isUuid) {
+          tenantId = tenantIdHeader
+        } else {
+          const tenant = await getTenantBySlug(tenantIdHeader)
+          if (tenant) {
+            tenantId = tenant.id
+            isSuperAdmin = false
+          }
+        }
+      }
+      if (!tenantId) {
+        return NextResponse.json(
+          { success: false, error: 'Não autenticado' },
+          { status: 401 }
+        )
+      }
     }
 
     // Data atual e início da semana (segunda-feira)
