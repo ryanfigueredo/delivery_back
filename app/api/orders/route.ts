@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getStoreStatus } from "@/lib/store-status";
 import { Prisma } from "@prisma/client";
 
 // Forçar rota dinâmica (não pode ser renderizada estaticamente)
@@ -521,6 +522,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const storeStatus = getStoreStatus();
+    if (!storeStatus.isOpen) {
+      const message =
+        storeStatus.message?.trim() ||
+        (storeStatus.nextOpenTime
+          ? `Loja fechada. Abre às ${storeStatus.nextOpenTime}.`
+          : "Loja fechada no momento. Volte em breve.");
+      return NextResponse.json(
+        { success: false, error: message },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const customerName = String(body?.customer_name ?? "").trim().substring(0, 200);
     if (!customerName) {
@@ -576,18 +590,18 @@ export async function POST(request: NextRequest) {
     const orderNumber = ordersFromPhone + 1;
     const customerTotalOrders = ordersFromPhone + 1;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { getTodayBRTBounds, formatDisplayId } = await import(
+      "@/lib/order-display-id"
+    );
+    const { start: dayStart, end: dayEnd } = getTodayBRTBounds();
     const dailySequence =
       (await prisma.order.count({
         where: {
           tenant_id: tenantId,
-          created_at: { gte: today, lt: tomorrow },
+          created_at: { gte: dayStart, lte: dayEnd },
         },
       })) + 1;
-    const displayId = `#${String(dailySequence).padStart(3, "0")}`;
+    const displayId = formatDisplayId(dailySequence);
     const estimatedTime = dailySequence * 20;
 
     const order = await prisma.order.create({

@@ -217,23 +217,19 @@ export async function POST(request: NextRequest) {
     const customerTotalOrders = ordersFromPhone + 1
 
     // Calcular sequência diária (quantos pedidos foram feitos hoje)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const { getTodayBRTBounds, formatDisplayId } = await import(
+      "@/lib/order-display-id"
+    )
+    const { start: dayStart, end: dayEnd } = getTodayBRTBounds()
+    const dailySequence =
+      (await prisma.order.count({
+        where: {
+          tenant_id: tenantId,
+          created_at: { gte: dayStart, lte: dayEnd },
+        },
+      })) + 1
 
-    const dailySequence = await prisma.order.count({
-      where: {
-        tenant_id: tenantId,
-        created_at: {
-          gte: today,
-          lt: tomorrow
-        }
-      }
-    }) + 1
-
-    // Gerar display_id no formato #001, #002, #003 (sequência diária com zeros à esquerda)
-    const displayId = `#${String(dailySequence).padStart(3, '0')}`
+    const displayId = formatDisplayId(dailySequence)
 
     // Calcular tempo estimado baseado na fila (20 minutos por pedido)
     // Se for o 1º pedido = 20 min, 2º = 40 min, 3º = 60 min, etc.
